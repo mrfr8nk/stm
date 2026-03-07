@@ -257,7 +257,7 @@ const Admissions = () => {
       </section>
 
       {/* Pass Rates */}
-      <section className="py-16 bg-background">
+      <section id="pass-rates" className="py-16 bg-background">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-12">
             <h2 className="font-display text-3xl font-bold text-foreground mb-4">Our Pass Rates</h2>
