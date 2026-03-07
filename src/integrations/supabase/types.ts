@@ -14,11 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      academic_sessions: {
+        Row: {
+          academic_year: number
+          created_at: string
+          end_date: string
+          id: string
+          is_current: boolean
+          start_date: string
+          term: Database["public"]["Enums"]["school_term"]
+        }
+        Insert: {
+          academic_year: number
+          created_at?: string
+          end_date: string
+          id?: string
+          is_current?: boolean
+          start_date: string
+          term: Database["public"]["Enums"]["school_term"]
+        }
+        Update: {
+          academic_year?: number
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_current?: boolean
+          start_date?: string
+          term?: Database["public"]["Enums"]["school_term"]
+        }
+        Relationships: []
+      }
       access_codes: {
         Row: {
           code: string
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           expires_at: string | null
           id: string
           role: Database["public"]["Enums"]["app_role"]
@@ -29,6 +60,7 @@ export type Database = {
           code: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           expires_at?: string | null
           id?: string
           role: Database["public"]["Enums"]["app_role"]
@@ -39,6 +71,7 @@ export type Database = {
           code?: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           expires_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
@@ -52,6 +85,7 @@ export type Database = {
           author_id: string
           content: string
           created_at: string
+          deleted_at: string | null
           id: string
           is_pinned: boolean | null
           target_role: Database["public"]["Enums"]["app_role"] | null
@@ -62,6 +96,7 @@ export type Database = {
           author_id: string
           content: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_pinned?: boolean | null
           target_role?: Database["public"]["Enums"]["app_role"] | null
@@ -72,10 +107,74 @@ export type Database = {
           author_id?: string
           content?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_pinned?: boolean | null
           target_role?: Database["public"]["Enums"]["app_role"] | null
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      applications: {
+        Row: {
+          address: string | null
+          created_at: string
+          date_of_birth: string | null
+          email: string
+          form: number
+          full_name: string
+          guardian_email: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
+          id: string
+          level: Database["public"]["Enums"]["academic_level"]
+          notes: string | null
+          phone: string | null
+          previous_school: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email: string
+          form?: number
+          full_name: string
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          id?: string
+          level?: Database["public"]["Enums"]["academic_level"]
+          notes?: string | null
+          phone?: string | null
+          previous_school?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string
+          form?: number
+          full_name?: string
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          id?: string
+          level?: Database["public"]["Enums"]["academic_level"]
+          notes?: string | null
+          phone?: string | null
+          previous_school?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -126,6 +225,7 @@ export type Database = {
           academic_year: number
           class_teacher_id: string | null
           created_at: string
+          deleted_at: string | null
           form: number
           id: string
           level: Database["public"]["Enums"]["academic_level"]
@@ -136,6 +236,7 @@ export type Database = {
           academic_year?: number
           class_teacher_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           form: number
           id?: string
           level: Database["public"]["Enums"]["academic_level"]
@@ -146,6 +247,7 @@ export type Database = {
           academic_year?: number
           class_teacher_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           form?: number
           id?: string
           level?: Database["public"]["Enums"]["academic_level"]
@@ -160,6 +262,7 @@ export type Database = {
           amount_due: number
           amount_paid: number
           created_at: string
+          deleted_at: string | null
           id: string
           notes: string | null
           payment_date: string | null
@@ -172,6 +275,7 @@ export type Database = {
           amount_due: number
           amount_paid?: number
           created_at?: string
+          deleted_at?: string | null
           id?: string
           notes?: string | null
           payment_date?: string | null
@@ -184,6 +288,7 @@ export type Database = {
           amount_due?: number
           amount_paid?: number
           created_at?: string
+          deleted_at?: string | null
           id?: string
           notes?: string | null
           payment_date?: string | null
@@ -199,6 +304,7 @@ export type Database = {
           class_id: string
           comment: string | null
           created_at: string
+          deleted_at: string | null
           grade_letter: string | null
           id: string
           mark: number
@@ -213,6 +319,7 @@ export type Database = {
           class_id: string
           comment?: string | null
           created_at?: string
+          deleted_at?: string | null
           grade_letter?: string | null
           id?: string
           mark: number
@@ -227,6 +334,7 @@ export type Database = {
           class_id?: string
           comment?: string | null
           created_at?: string
+          deleted_at?: string | null
           grade_letter?: string | null
           id?: string
           mark?: number
@@ -379,6 +487,7 @@ export type Database = {
         Row: {
           code: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           is_compulsory: boolean | null
           level: Database["public"]["Enums"]["academic_level"] | null
@@ -387,6 +496,7 @@ export type Database = {
         Insert: {
           code?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_compulsory?: boolean | null
           level?: Database["public"]["Enums"]["academic_level"] | null
@@ -395,6 +505,7 @@ export type Database = {
         Update: {
           code?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_compulsory?: boolean | null
           level?: Database["public"]["Enums"]["academic_level"] | null
