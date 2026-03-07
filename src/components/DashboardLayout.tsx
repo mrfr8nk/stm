@@ -23,7 +23,7 @@ const teacherNav: NavItem[] = [
   { label: "Attendance", path: "/teacher/attendance", icon: ClipboardCheck },
   { label: "Report Cards", path: "/teacher/reports", icon: FileText },
   { label: "Announcements", path: "/teacher/announcements", icon: Bell },
-  { label: "Profile", path: "/teacher/profile", icon: User },
+  { label: "Settings", path: "/teacher/profile", icon: Settings },
 ];
 
 const studentNav: NavItem[] = [
@@ -33,7 +33,7 @@ const studentNav: NavItem[] = [
   { label: "Report Cards", path: "/student/reports", icon: FileText },
   { label: "Announcements", path: "/student/announcements", icon: Bell },
   { label: "Fees", path: "/student/fees", icon: DollarSign },
-  { label: "Profile", path: "/student/profile", icon: User },
+  { label: "Settings", path: "/student/profile", icon: Settings },
 ];
 
 const adminNav: NavItem[] = [

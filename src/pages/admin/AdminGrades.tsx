@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Search, TrendingUp, TrendingDown, Users, Trash2, RotateCcw, Edit } from "lucide-react";
+import { BarChart3, Search, TrendingUp, TrendingDown, Users, Trash2, RotateCcw, Edit, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const AdminGrades = () => {
@@ -18,6 +18,7 @@ const AdminGrades = () => {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
+  const [scales, setScales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterClass, setFilterClass] = useState("");
@@ -27,14 +28,24 @@ const AdminGrades = () => {
   const [editGrade, setEditGrade] = useState<any>(null);
   const [editOpen, setEditOpen] = useState(false);
 
+  // Grading scale form
+  const [scaleLevel, setScaleLevel] = useState("o_level");
+  const [scaleLetter, setScaleLetter] = useState("");
+  const [scaleMin, setScaleMin] = useState("");
+  const [scaleMax, setScaleMax] = useState("");
+  const [scaleDesc, setScaleDesc] = useState("");
+  const [editScale, setEditScale] = useState<any>(null);
+  const [editScaleOpen, setEditScaleOpen] = useState(false);
+
   const fetchData = async () => {
     setLoading(true);
-    const [gradesRes, classesRes, subjectsRes, profilesRes, sessionsRes] = await Promise.all([
+    const [gradesRes, classesRes, subjectsRes, profilesRes, sessionsRes, scalesRes] = await Promise.all([
       supabase.from("grades").select("*").order("created_at", { ascending: false }),
       supabase.from("classes").select("*").is("deleted_at", null).order("form"),
       supabase.from("subjects").select("*").is("deleted_at", null).order("name"),
       supabase.from("profiles").select("*"),
       supabase.from("academic_sessions").select("*").order("academic_year").order("term"),
+      supabase.from("grading_scales").select("*").order("level").order("min_mark", { ascending: false }),
     ]);
     const all = gradesRes.data || [];
     setGrades(all.filter((g: any) => !g.deleted_at));
@@ -43,6 +54,7 @@ const AdminGrades = () => {
     setSubjects(subjectsRes.data || []);
     setProfiles(profilesRes.data || []);
     setSessions(sessionsRes.data || []);
+    setScales(scalesRes.data || []);
     setLoading(false);
   };
 
@@ -92,62 +104,92 @@ const AdminGrades = () => {
     else { toast({ title: "Grade Updated" }); setEditOpen(false); fetchData(); }
   };
 
+  // Grading scale handlers
+  const handleAddScale = async () => {
+    if (!scaleLetter || !scaleMin || !scaleMax) return;
+    const { error } = await supabase.from("grading_scales").insert({
+      level: scaleLevel as any, grade_letter: scaleLetter.toUpperCase(),
+      min_mark: Number(scaleMin), max_mark: Number(scaleMax), description: scaleDesc || null,
+    });
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else { toast({ title: "Grading Scale Added" }); setScaleLetter(""); setScaleMin(""); setScaleMax(""); setScaleDesc(""); fetchData(); }
+  };
+
+  const handleDeleteScale = async (id: string) => {
+    if (!confirm("Delete this grading scale?")) return;
+    await supabase.from("grading_scales").delete().eq("id", id);
+    toast({ title: "Scale Deleted" }); fetchData();
+  };
+
+  const handleEditScaleSave = async () => {
+    if (!editScale) return;
+    const { error } = await supabase.from("grading_scales").update({
+      grade_letter: editScale.grade_letter, min_mark: Number(editScale.min_mark),
+      max_mark: Number(editScale.max_mark), description: editScale.description,
+    }).eq("id", editScale.id);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else { toast({ title: "Scale Updated" }); setEditScaleOpen(false); fetchData(); }
+  };
+
+  const levelGroups = ["zjc", "o_level", "a_level"];
+
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
         <h1 className="font-display text-2xl font-bold text-foreground">Grades Overview</h1>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {[
-            { label: "Total Grades", value: stats.total, icon: BarChart3, color: "text-primary" },
-            { label: "Average Mark", value: `${stats.avg}%`, icon: BarChart3, color: "text-secondary" },
-            { label: "Highest", value: `${stats.highest}%`, icon: TrendingUp, color: "text-green-600" },
-            { label: "Lowest", value: `${stats.lowest}%`, icon: TrendingDown, color: "text-destructive" },
-            { label: "Pass Rate", value: `${stats.passRate}%`, icon: Users, color: "text-accent" },
-          ].map(s => (
-            <Card key={s.label}>
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className={`p-2 rounded-lg bg-muted ${s.color}`}><s.icon className="w-5 h-5" /></div>
-                <div><p className="text-xl font-bold">{s.value}</p><p className="text-xs text-muted-foreground">{s.label}</p></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Filters with Year */}
-        <Card>
-          <CardContent className="p-4 flex flex-wrap gap-3 items-center">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-            </div>
-            <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={filterYear} onChange={e => setFilterYear(e.target.value)}>
-              <option value="">All Years</option>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-            <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={filterTerm} onChange={e => setFilterTerm(e.target.value)}>
-              <option value="">All Terms</option>
-              <option value="term_1">Term 1</option><option value="term_2">Term 2</option><option value="term_3">Term 3</option>
-            </select>
-            <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
-              <option value="">All Classes</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={filterSubject} onChange={e => setFilterSubject(e.target.value)}>
-              <option value="">All Subjects</option>
-              {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </CardContent>
-        </Card>
-
-        <Tabs defaultValue="active">
+        <Tabs defaultValue="grades">
           <TabsList>
-            <TabsTrigger value="active">Grades ({filtered.length})</TabsTrigger>
+            <TabsTrigger value="grades">Grade Records</TabsTrigger>
+            <TabsTrigger value="scales">Grading Scales</TabsTrigger>
             <TabsTrigger value="deleted">Deleted ({deletedGrades.length})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="active">
+          <TabsContent value="grades" className="space-y-6">
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {[
+                { label: "Total Grades", value: stats.total, icon: BarChart3, color: "text-primary" },
+                { label: "Average Mark", value: `${stats.avg}%`, icon: BarChart3, color: "text-secondary" },
+                { label: "Highest", value: `${stats.highest}%`, icon: TrendingUp, color: "text-green-600" },
+                { label: "Lowest", value: `${stats.lowest}%`, icon: TrendingDown, color: "text-destructive" },
+                { label: "Pass Rate", value: `${stats.passRate}%`, icon: Users, color: "text-accent" },
+              ].map(s => (
+                <Card key={s.label}>
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className={`p-2 rounded-lg bg-muted ${s.color}`}><s.icon className="w-5 h-5" /></div>
+                    <div><p className="text-xl font-bold">{s.value}</p><p className="text-xs text-muted-foreground">{s.label}</p></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Filters */}
+            <Card>
+              <CardContent className="p-4 flex flex-wrap gap-3 items-center">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+                </div>
+                <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={filterYear} onChange={e => setFilterYear(e.target.value)}>
+                  <option value="">All Years</option>
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={filterTerm} onChange={e => setFilterTerm(e.target.value)}>
+                  <option value="">All Terms</option>
+                  <option value="term_1">Term 1</option><option value="term_2">Term 2</option><option value="term_3">Term 3</option>
+                </select>
+                <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
+                  <option value="">All Classes</option>
+                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={filterSubject} onChange={e => setFilterSubject(e.target.value)}>
+                  <option value="">All Subjects</option>
+                  {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardContent className="p-0">
                 <Table>
@@ -192,6 +234,61 @@ const AdminGrades = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="scales" className="space-y-6">
+            {levelGroups.map(level => {
+              const levelScales = scales.filter(s => s.level === level);
+              return (
+                <Card key={level}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{level.replace("_", " ").toUpperCase()} Grading Scale</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Grade</TableHead><TableHead>Min Mark</TableHead><TableHead>Max Mark</TableHead>
+                          <TableHead>Description</TableHead><TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {levelScales.length === 0 ? (
+                          <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground">No scales configured</TableCell></TableRow>
+                        ) : levelScales.map(s => (
+                          <TableRow key={s.id}>
+                            <TableCell className="font-bold text-lg">{s.grade_letter}</TableCell>
+                            <TableCell>{s.min_mark}%</TableCell>
+                            <TableCell>{s.max_mark}%</TableCell>
+                            <TableCell className="text-muted-foreground">{s.description || "—"}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => { setEditScale({ ...s }); setEditScaleOpen(true); }}><Edit className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleDeleteScale(s.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Plus className="w-5 h-5" /> Add Custom Scale</CardTitle></CardHeader>
+              <CardContent className="flex flex-wrap gap-3">
+                <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={scaleLevel} onChange={e => setScaleLevel(e.target.value)}>
+                  <option value="zjc">ZJC</option><option value="o_level">O Level</option><option value="a_level">A Level</option>
+                </select>
+                <Input placeholder="Grade (A, B...)" value={scaleLetter} onChange={e => setScaleLetter(e.target.value)} className="w-24" />
+                <Input placeholder="Min %" type="number" value={scaleMin} onChange={e => setScaleMin(e.target.value)} className="w-20" />
+                <Input placeholder="Max %" type="number" value={scaleMax} onChange={e => setScaleMax(e.target.value)} className="w-20" />
+                <Input placeholder="Description" value={scaleDesc} onChange={e => setScaleDesc(e.target.value)} className="flex-1 min-w-[150px]" />
+                <Button onClick={handleAddScale}><Plus className="w-4 h-4 mr-1" /> Add</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="deleted">
             <Card>
               <CardContent className="p-0">
@@ -218,6 +315,7 @@ const AdminGrades = () => {
           </TabsContent>
         </Tabs>
 
+        {/* Edit Grade Dialog */}
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Edit Grade</DialogTitle></DialogHeader>
@@ -227,6 +325,25 @@ const AdminGrades = () => {
                 <Input type="number" placeholder="Mark" value={editGrade.mark} onChange={e => setEditGrade({...editGrade, mark: Number(e.target.value)})} />
                 <textarea className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm min-h-[80px]" placeholder="Comment" value={editGrade.comment || ""} onChange={e => setEditGrade({...editGrade, comment: e.target.value})} />
                 <Button className="w-full" onClick={handleEditSave}>Save Changes</Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Scale Dialog */}
+        <Dialog open={editScaleOpen} onOpenChange={setEditScaleOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Edit Grading Scale</DialogTitle></DialogHeader>
+            {editScale && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">{editScale.level.replace("_", " ").toUpperCase()}</p>
+                <Input placeholder="Grade Letter" value={editScale.grade_letter} onChange={e => setEditScale({ ...editScale, grade_letter: e.target.value })} />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input type="number" placeholder="Min %" value={editScale.min_mark} onChange={e => setEditScale({ ...editScale, min_mark: e.target.value })} />
+                  <Input type="number" placeholder="Max %" value={editScale.max_mark} onChange={e => setEditScale({ ...editScale, max_mark: e.target.value })} />
+                </div>
+                <Input placeholder="Description" value={editScale.description || ""} onChange={e => setEditScale({ ...editScale, description: e.target.value })} />
+                <Button className="w-full" onClick={handleEditScaleSave}>Save Changes</Button>
               </div>
             )}
           </DialogContent>
