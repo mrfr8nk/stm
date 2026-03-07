@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, CheckCircle, XCircle, Clock, Eye, Loader2 } from "lucide-react";
+import { FileText, Search, CheckCircle, XCircle, Clock, Eye, Loader2, FileDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { exportCSV } from "@/lib/csv-export";
 
 const AdminApplications = () => {
   const { user } = useAuth();

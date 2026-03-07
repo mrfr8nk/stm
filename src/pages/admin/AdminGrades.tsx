@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Search, TrendingUp, TrendingDown, Users, Trash2, RotateCcw, Edit, Plus } from "lucide-react";
+import { BarChart3, Search, TrendingUp, TrendingDown, Users, Trash2, RotateCcw, Edit, Plus, FileDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { exportCSV } from "@/lib/csv-export";
 
 const AdminGrades = () => {
   const { toast } = useToast();
