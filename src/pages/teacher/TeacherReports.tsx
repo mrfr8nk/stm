@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -6,8 +6,46 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Download, Printer } from "lucide-react";
+import { FileText, Download, Printer, Eye, X } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { getGrade, getGradeColor, type GradingScale } from "@/lib/grading";
 import schoolLogo from "@/assets/school-logo.png";
+
+const SCHOOL_INFO = {
+  name: "St. Mary's High School",
+  motto: "Excellence Through Knowledge",
+  address: "P.O. Box 123, Harare, Zimbabwe",
+  phone: "+263 242 123 456",
+  reg: "REG/2024/SM-001",
+};
+
+const getComment = (avg: number) => {
+  if (avg >= 80) return "Outstanding performance. Keep up the excellent work!";
+  if (avg >= 70) return "Very good performance. Shows great potential.";
+  if (avg >= 60) return "Good performance. Consistent effort is noted.";
+  if (avg >= 50) return "Satisfactory performance. Room for improvement.";
+  if (avg >= 40) return "Below average. Needs to put in more effort.";
+  return "Unsatisfactory. Immediate intervention required.";
+};
+
+const ordinal = (n: number) => n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`;
+
+const getLogoBase64 = (): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => resolve("");
+    img.src = schoolLogo;
+  });
+};
 
 const TeacherReports = () => {
   const { user } = useAuth();
@@ -19,27 +57,25 @@ const TeacherReports = () => {
   const [term, setTerm] = useState("term_1");
   const [year, setYear] = useState(new Date().getFullYear());
   const [generating, setGenerating] = useState(false);
-  const [gradingScales, setGradingScales] = useState<any[]>([]);
-  const [schoolInfo] = useState({
-    name: "St. Mary's High School",
-    motto: "Excellence Through Knowledge",
-    address: "P.O. Box 123, Harare, Zimbabwe",
-    phone: "+263 242 123 456",
-    reg: "REG/2024/SM-001"
-  });
+  const [gradingScales, setGradingScales] = useState<GradingScale[]>([]);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    Promise.all([
-      supabase.from("teacher_assignments").select("*, classes(*), subjects(*)").eq("teacher_id", user.id),
-      supabase.from("grading_scales").select("*"),
-    ]).then(([assignRes, scalesRes]) => {
-      setAssignments(assignRes.data || []);
-      setGradingScales(scalesRes.data || []);
-    });
+    supabase.from("teacher_assignments").select("*, classes(*), subjects(*)").eq("teacher_id", user.id)
+      .then(({ data }) => setAssignments(data || []));
   }, [user]);
 
   const uniqueClasses = Array.from(new Map(assignments.map(a => [a.class_id, a.classes])).values()).filter(Boolean);
+
+  // Fetch grading scales when class changes
+  useEffect(() => {
+    if (!selectedClassId) return;
+    const cls = uniqueClasses.find((c: any) => c.id === selectedClassId);
+    const level = cls?.level || "o_level";
+    supabase.from("grading_scales").select("*").eq("level", level)
+      .then(({ data }) => setGradingScales(data || []));
+  }, [selectedClassId, assignments]);
 
   useEffect(() => {
     if (!selectedClassId) return;
@@ -51,8 +87,7 @@ const TeacherReports = () => {
       const spData = spRes.data || [];
       if (spData.length > 0) {
         const userIds = spData.map(s => s.user_id);
-        const { data: profilesData } = await supabase.from("profiles")
-          .select("user_id, full_name").in("user_id", userIds);
+        const { data: profilesData } = await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds);
         const profileMap: Record<string, any> = {};
         (profilesData || []).forEach(p => { profileMap[p.user_id] = p; });
         setStudents(spData.map(s => ({ ...s, profiles: profileMap[s.user_id] || null })));
@@ -64,55 +99,17 @@ const TeacherReports = () => {
     fetchData();
   }, [selectedClassId, term, year]);
 
-  const getGradeLetter = (mark: number, level: string) => {
-    const scales = gradingScales.filter(s => s.level === level);
-    if (scales.length > 0) {
-      const match = scales.find(s => mark >= s.min_mark && mark <= s.max_mark);
-      if (match) return match.grade_letter;
+  const getGradeScaleHTML = useCallback(() => {
+    const sorted = [...gradingScales].sort((a, b) => b.max_mark - a.max_mark);
+    if (sorted.length > 0) {
+      return sorted.map(s => `<td><strong>${s.grade_letter}</strong> ${s.min_mark}-${s.max_mark}</td>`).join("");
     }
-    // Fallback
-    if (level === "a_level") {
-      if (mark >= 76) return "A"; if (mark >= 67) return "B"; if (mark >= 55) return "C";
-      if (mark >= 45) return "D"; if (mark >= 35) return "E"; return "O";
-    } else if (level === "zjc") {
-      if (mark >= 75) return "A"; if (mark >= 65) return "B"; if (mark >= 50) return "C";
-      if (mark >= 40) return "D"; return "U";
-    }
-    if (mark >= 70) return "A"; if (mark >= 60) return "B"; if (mark >= 50) return "C";
-    if (mark >= 40) return "D"; if (mark >= 30) return "E"; return "U";
-  };
+    return '<td><strong>A</strong> 70-100</td><td><strong>B</strong> 60-69</td><td><strong>C</strong> 50-59</td><td><strong>D</strong> 40-49</td><td><strong>U</strong> 0-39</td>';
+  }, [gradingScales]);
 
-  const getComment = (avg: number) => {
-    if (avg >= 80) return "Outstanding performance. Keep up the excellent work!";
-    if (avg >= 70) return "Very good performance. Shows great potential.";
-    if (avg >= 60) return "Good performance. Consistent effort is noted.";
-    if (avg >= 50) return "Satisfactory performance. Room for improvement.";
-    if (avg >= 40) return "Below average. Needs to put in more effort.";
-    return "Unsatisfactory. Immediate intervention required.";
-  };
-
-  // Convert school logo to base64 for embedding
-  const getLogoBase64 = (): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL("image/png"));
-      };
-      img.onerror = () => resolve("");
-      img.src = schoolLogo;
-    });
-  };
-
-  const generateReport = async (student: any) => {
+  const buildReportHtml = useCallback(async (student: any) => {
     const studentGrades = grades.filter(g => g.student_id === student.user_id);
-    const classForStudent = uniqueClasses.find(c => c.id === selectedClassId);
-    const level = student.level || classForStudent?.level || "o_level";
+    const classForStudent = uniqueClasses.find((c: any) => c.id === selectedClassId);
     const logoBase64 = await getLogoBase64();
 
     const allStudentAverages = students.map(s => {
@@ -128,18 +125,8 @@ const TeacherReports = () => {
     const serialNo = `RPT-${year}-${term.replace("term_", "T")}-${Date.now().toString(36).toUpperCase()}`;
     const termLabel = term.replace("_", " ").toUpperCase();
     const dateGenerated = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
-
-    const getGradeScaleHTML = () => {
-      const scales = gradingScales.filter(s => s.level === level).sort((a, b) => b.max_mark - a.max_mark);
-      if (scales.length > 0) {
-        return scales.map(s => `<td><strong>${s.grade_letter}</strong> ${s.min_mark}-${s.max_mark}</td>`).join("");
-      }
-      if (level === "a_level") return '<td><strong>A</strong> 76-100</td><td><strong>B</strong> 67-75</td><td><strong>C</strong> 55-66</td><td><strong>D</strong> 45-54</td><td><strong>E</strong> 35-44</td><td><strong>O</strong> 0-34</td>';
-      if (level === "zjc") return '<td><strong>A</strong> 75-100</td><td><strong>B</strong> 65-74</td><td><strong>C</strong> 50-64</td><td><strong>D</strong> 40-49</td><td><strong>U</strong> 0-39</td>';
-      return '<td><strong>A</strong> 70-100</td><td><strong>B</strong> 60-69</td><td><strong>C</strong> 50-59</td><td><strong>D</strong> 40-49</td><td><strong>E</strong> 30-39</td><td><strong>U</strong> 0-29</td>';
-    };
-
-    const ordinal = (n: number) => n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`;
+    const level = student.level || classForStudent?.level || "o_level";
+    const overallGrade = getGrade(avg, gradingScales);
 
     const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Report Card - ${student.profiles?.full_name}</title>
@@ -168,7 +155,7 @@ const TeacherReports = () => {
   table.grades tr:nth-child(even) { background: #f8f9fa; }
   .mark-cell { text-align: center; font-weight: bold; }
   .grade-a { color: #0a8f3c; } .grade-b { color: #1e6f9f; } .grade-c { color: #b8860b; }
-  .grade-d { color: #cc6600; } .grade-e,.grade-f { color: #cc0000; }
+  .grade-d { color: #cc6600; } .grade-e,.grade-f,.grade-u { color: #cc0000; }
   .summary-box { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 12px; }
   .summary-item { text-align: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #fafafa; }
   .summary-item .num { font-size: 16pt; font-weight: bold; color: #0a3d62; }
@@ -192,9 +179,9 @@ const TeacherReports = () => {
   <div class="header">
     ${logoBase64 ? `<img src="${logoBase64}" class="header-logo" alt="School Logo" />` : '<div class="header-logo-fallback">SM</div>'}
     <div class="header-center">
-      <h1>${schoolInfo.name}</h1>
-      <div class="motto">"${schoolInfo.motto}"</div>
-      <div class="address">${schoolInfo.address} | Tel: ${schoolInfo.phone} | Reg: ${schoolInfo.reg}</div>
+      <h1>${SCHOOL_INFO.name}</h1>
+      <div class="motto">"${SCHOOL_INFO.motto}"</div>
+      <div class="address">${SCHOOL_INFO.address} | Tel: ${SCHOOL_INFO.phone} | Reg: ${SCHOOL_INFO.reg}</div>
     </div>
     ${logoBase64 ? `<img src="${logoBase64}" class="header-logo" alt="School Logo" />` : '<div class="header-logo-fallback">SM</div>'}
   </div>
@@ -214,8 +201,8 @@ const TeacherReports = () => {
     <thead><tr><th>#</th><th>Subject</th><th>Code</th><th style="text-align:center">Mark (%)</th><th style="text-align:center">Grade</th><th>Teacher's Comment</th></tr></thead>
     <tbody>
       ${studentGrades.map((g, i) => {
-        const grade = getGradeLetter(Number(g.mark), level);
-        const gc = grade === "A" ? "grade-a" : grade === "B" ? "grade-b" : grade === "C" ? "grade-c" : grade === "D" ? "grade-d" : "grade-f";
+        const grade = getGrade(Number(g.mark), gradingScales);
+        const gc = grade === "A" ? "grade-a" : grade === "B" ? "grade-b" : grade === "C" ? "grade-c" : grade === "D" ? "grade-d" : "grade-u";
         return `<tr>
           <td>${i + 1}</td>
           <td>${g.subjects?.name || "—"}</td>
@@ -229,7 +216,7 @@ const TeacherReports = () => {
       ${studentGrades.length > 0 ? `<tr style="background:#f0f0f0;font-weight:bold">
         <td colspan="3" style="text-align:right">Total / Average:</td>
         <td class="mark-cell">${totalMark} / ${avg}%</td>
-        <td class="mark-cell">${getGradeLetter(avg, level)}</td>
+        <td class="mark-cell">${overallGrade}</td>
         <td></td>
       </tr>` : ""}
     </tbody>
@@ -240,7 +227,7 @@ const TeacherReports = () => {
     <div class="summary-item"><div class="num">${ordinal(position)}</div><div class="lbl">Position</div></div>
     <div class="summary-item"><div class="num">${totalStudents}</div><div class="lbl">Out of</div></div>
     <div class="summary-item"><div class="num">${studentGrades.length}</div><div class="lbl">Subjects</div></div>
-    <div class="summary-item"><div class="num">${getGradeLetter(avg, level)}</div><div class="lbl">Overall</div></div>
+    <div class="summary-item"><div class="num">${overallGrade}</div><div class="lbl">Overall</div></div>
   </div>
   
   <div class="comment-box">
@@ -264,11 +251,11 @@ const TeacherReports = () => {
   <div class="stamp">OFFICIAL<br/>DOCUMENT</div>
   
   <div class="security-strip">
-    OFFICIAL ACADEMIC RECORD | Serial: ${serialNo} | Generated: ${dateGenerated} | ${schoolInfo.name} | This document is computer-generated. Any unauthorized alteration renders it void.
+    OFFICIAL ACADEMIC RECORD | Serial: ${serialNo} | Generated: ${dateGenerated} | ${SCHOOL_INFO.name} | This document is computer-generated. Any unauthorized alteration renders it void.
   </div>
   
   <div class="footer">
-    <p>${schoolInfo.name} | ${schoolInfo.address} | Tel: ${schoolInfo.phone}</p>
+    <p>${SCHOOL_INFO.name} | ${SCHOOL_INFO.address} | Tel: ${SCHOOL_INFO.phone}</p>
     <p>This is an official academic record. Unauthorized reproduction or alteration is a criminal offense.</p>
   </div>
   
@@ -278,6 +265,16 @@ const TeacherReports = () => {
   </div>
 </div></body></html>`;
 
+    return html;
+  }, [grades, students, gradingScales, selectedClassId, uniqueClasses, term, year, getGradeScaleHTML]);
+
+  const previewReport = async (student: any) => {
+    const html = await buildReportHtml(student);
+    setPreviewHtml(html);
+  };
+
+  const downloadReport = async (student: any) => {
+    const html = await buildReportHtml(student);
     const w = window.open("", "_blank");
     if (w) { w.document.write(html); w.document.close(); }
   };
@@ -285,7 +282,7 @@ const TeacherReports = () => {
   const generateAll = async () => {
     setGenerating(true);
     for (let i = 0; i < students.length; i++) {
-      await generateReport(students[i]);
+      await downloadReport(students[i]);
       await new Promise(r => setTimeout(r, 300));
     }
     setGenerating(false);
@@ -333,7 +330,8 @@ const TeacherReports = () => {
                 {students.map((s, i) => {
                   const studentGrades = grades.filter(g => g.student_id === s.user_id);
                   const avg = studentGrades.length > 0 ? Math.round(studentGrades.reduce((sum, g) => sum + Number(g.mark), 0) / studentGrades.length) : 0;
-                  const gradeColor = avg >= 70 ? "text-green-600" : avg >= 50 ? "text-yellow-600" : avg > 0 ? "text-red-600" : "text-muted-foreground";
+                  const grade = avg > 0 ? getGrade(avg, gradingScales) : "";
+                  const colorClass = grade ? getGradeColor(grade) : "";
 
                   return (
                     <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
@@ -343,10 +341,17 @@ const TeacherReports = () => {
                       </div>
                       <span className="flex-1 font-medium text-foreground">{s.profiles?.full_name || "Student"}</span>
                       <Badge variant="outline" className="font-mono">{s.student_id || "—"}</Badge>
-                      <span className={`text-sm font-bold ${gradeColor}`}>{avg > 0 ? `${avg}%` : "—"}</span>
+                      {avg > 0 ? (
+                        <Badge className={`font-mono ${colorClass}`}>{avg}% ({grade})</Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
                       <Badge variant="secondary">{studentGrades.length} subjects</Badge>
-                      <Button variant="outline" size="sm" onClick={() => generateReport(s)}>
-                        <Download className="w-4 h-4 mr-1" /> Report
+                      <Button variant="outline" size="sm" onClick={() => previewReport(s)}>
+                        <Eye className="w-4 h-4 mr-1" /> Preview
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => downloadReport(s)}>
+                        <Download className="w-4 h-4 mr-1" /> Print
                       </Button>
                     </div>
                   );
@@ -372,6 +377,38 @@ const TeacherReports = () => {
           </Card>
         )}
       </div>
+
+      {/* Report Preview Dialog */}
+      <Dialog open={!!previewHtml} onOpenChange={() => setPreviewHtml(null)}>
+        <DialogContent className="max-w-4xl h-[90vh] p-0 gap-0">
+          <div className="flex items-center justify-between p-3 border-b border-border bg-muted/50">
+            <h3 className="text-sm font-semibold text-foreground">Report Card Preview</h3>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => {
+                if (previewHtml) {
+                  const w = window.open("", "_blank");
+                  if (w) { w.document.write(previewHtml); w.document.close(); }
+                }
+              }}>
+                <Printer className="w-4 h-4 mr-1" /> Print
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setPreviewHtml(null)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {previewHtml && (
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full h-full border-0"
+                title="Report Card Preview"
+                sandbox="allow-same-origin"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
