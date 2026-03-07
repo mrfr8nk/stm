@@ -159,12 +159,14 @@ const Login = () => {
               <CardContent>
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground">Email</label>
+                    <label className="text-sm font-medium text-foreground">
+                      {selectedPortal === "student" ? "Email or Student ID" : "Email"}
+                    </label>
                     <Input
-                      type="email"
-                      placeholder="your.email@stmaryshigh.edu.zw"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      type="text"
+                      placeholder={selectedPortal === "student" ? "email or STM20260001" : "your.email@stmaryshigh.edu.zw"}
+                      value={loginId}
+                      onChange={(e) => setLoginId(e.target.value)}
                       required
                       autoFocus
                     />
