@@ -17,13 +17,15 @@ const AdminSettings = () => {
   const [currentSession, setCurrentSession] = useState<any>(null);
   const [editSession, setEditSession] = useState<any>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [editScale, setEditScale] = useState<any>(null);
+  const [editScaleOpen, setEditScaleOpen] = useState(false);
 
-  // New scale form
   const [scaleLevel, setScaleLevel] = useState("o_level");
   const [scaleLetter, setScaleLetter] = useState("");
   const [scaleMin, setScaleMin] = useState("");
   const [scaleMax, setScaleMax] = useState("");
   const [scaleDesc, setScaleDesc] = useState("");
+  const [filterLevel, setFilterLevel] = useState("");
 
   const fetchData = async () => {
     const [scaleRes, sessionRes] = await Promise.all([
@@ -39,7 +41,6 @@ const AdminSettings = () => {
   useEffect(() => { fetchData(); }, []);
 
   const handleSetCurrent = async (id: string) => {
-    // Unset all, then set selected
     await supabase.from("academic_sessions").update({ is_current: false }).neq("id", "none");
     await supabase.from("academic_sessions").update({ is_current: true }).eq("id", id);
     toast({ title: "Current Session Updated" });
@@ -57,8 +58,19 @@ const AdminSettings = () => {
   };
 
   const handleDeleteScale = async (id: string) => {
+    if (!confirm("Delete this grading scale?")) return;
     await supabase.from("grading_scales").delete().eq("id", id);
     toast({ title: "Scale Deleted" }); fetchData();
+  };
+
+  const handleEditScale = async () => {
+    if (!editScale) return;
+    const { error } = await supabase.from("grading_scales").update({
+      grade_letter: editScale.grade_letter, min_mark: Number(editScale.min_mark),
+      max_mark: Number(editScale.max_mark), description: editScale.description,
+    }).eq("id", editScale.id);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else { toast({ title: "Scale Updated" }); setEditScaleOpen(false); fetchData(); }
   };
 
   const handleEditSession = async () => {
@@ -72,22 +84,23 @@ const AdminSettings = () => {
 
   const termLabel = (t: string) => t.replace("_", " ").toUpperCase();
 
-  // Auto-detect current term
   const getAutoTerm = () => {
-    const now = new Date();
-    const month = now.getMonth() + 1;
+    const month = new Date().getMonth() + 1;
     if (month >= 1 && month <= 4) return "Term 1 (Jan–Apr)";
     if (month >= 5 && month <= 7) return "Term 2 (May–Jul)";
     if (month >= 9 && month <= 11) return "Term 3 (Sep–Nov)";
     return "Holiday Period";
   };
 
+  const filteredScales = filterLevel ? scales.filter(s => s.level === filterLevel) : scales;
+
+  const levelGroups = ["zjc", "o_level", "a_level"];
+
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
         <h1 className="font-display text-2xl font-bold text-foreground">System Settings</h1>
 
-        {/* Current Session Info */}
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4 flex-wrap">
@@ -96,24 +109,76 @@ const AdminSettings = () => {
                 <p className="text-lg font-bold">
                   {currentSession ? `${currentSession.academic_year} — ${termLabel(currentSession.term)}` : "No Active Session"}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Auto-detected: {getAutoTerm()} | Year: {new Date().getFullYear()}
-                </p>
-                {currentSession && (
-                  <p className="text-xs text-muted-foreground">
-                    {currentSession.start_date} to {currentSession.end_date}
-                  </p>
-                )}
+                <p className="text-sm text-muted-foreground">Auto-detected: {getAutoTerm()} | Year: {new Date().getFullYear()}</p>
+                {currentSession && <p className="text-xs text-muted-foreground">{currentSession.start_date} to {currentSession.end_date}</p>}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="sessions">
+        <Tabs defaultValue="grading">
           <TabsList>
-            <TabsTrigger value="sessions">Academic Sessions</TabsTrigger>
             <TabsTrigger value="grading">Grading Scales</TabsTrigger>
+            <TabsTrigger value="sessions">Academic Sessions</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="grading">
+            {/* Grading scales grouped by level */}
+            <div className="space-y-6">
+              {levelGroups.map(level => {
+                const levelScales = scales.filter(s => s.level === level);
+                return (
+                  <Card key={level}>
+                    <CardHeader>
+                      <CardTitle className="text-lg">{level.replace("_", " ").toUpperCase()} Grading Scale</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Grade</TableHead><TableHead>Min Mark</TableHead><TableHead>Max Mark</TableHead>
+                            <TableHead>Description</TableHead><TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {levelScales.length === 0 ? (
+                            <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground">No scales configured</TableCell></TableRow>
+                          ) : levelScales.map(s => (
+                            <TableRow key={s.id}>
+                              <TableCell className="font-bold text-lg">{s.grade_letter}</TableCell>
+                              <TableCell>{s.min_mark}%</TableCell>
+                              <TableCell>{s.max_mark}%</TableCell>
+                              <TableCell className="text-muted-foreground">{s.description || "—"}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="sm" onClick={() => { setEditScale({ ...s }); setEditScaleOpen(true); }}><Edit className="w-4 h-4" /></Button>
+                                  <Button variant="ghost" size="sm" onClick={() => handleDeleteScale(s.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Plus className="w-5 h-5" /> Add Custom Scale</CardTitle></CardHeader>
+                <CardContent className="flex flex-wrap gap-3">
+                  <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={scaleLevel} onChange={e => setScaleLevel(e.target.value)}>
+                    <option value="zjc">ZJC</option><option value="o_level">O Level</option><option value="a_level">A Level</option>
+                  </select>
+                  <Input placeholder="Grade (A, B...)" value={scaleLetter} onChange={e => setScaleLetter(e.target.value)} className="w-24" />
+                  <Input placeholder="Min %" type="number" value={scaleMin} onChange={e => setScaleMin(e.target.value)} className="w-20" />
+                  <Input placeholder="Max %" type="number" value={scaleMax} onChange={e => setScaleMax(e.target.value)} className="w-20" />
+                  <Input placeholder="Description" value={scaleDesc} onChange={e => setScaleDesc(e.target.value)} className="flex-1 min-w-[150px]" />
+                  <Button onClick={handleAddScale}><Plus className="w-4 h-4 mr-1" /> Add</Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           <TabsContent value="sessions">
             <Card>
@@ -136,9 +201,7 @@ const AdminSettings = () => {
                         <TableCell>
                           {s.is_current ? (
                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Current</span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
+                          ) : <span className="text-xs text-muted-foreground">—</span>}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -147,51 +210,8 @@ const AdminSettings = () => {
                                 <CheckCircle className="w-4 h-4 mr-1" /> Set Current
                               </Button>
                             )}
-                            <Button variant="ghost" size="sm" onClick={() => { setEditSession({...s}); setEditOpen(true); }}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => { setEditSession({ ...s }); setEditOpen(true); }}><Edit className="w-4 h-4" /></Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="grading">
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><Plus className="w-5 h-5" /> Add Grading Scale</CardTitle></CardHeader>
-              <CardContent className="flex flex-wrap gap-3">
-                <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={scaleLevel} onChange={e => setScaleLevel(e.target.value)}>
-                  <option value="zjc">ZJC</option><option value="o_level">O Level</option><option value="a_level">A Level</option>
-                </select>
-                <Input placeholder="Grade (A, B...)" value={scaleLetter} onChange={e => setScaleLetter(e.target.value)} className="w-24" />
-                <Input placeholder="Min" type="number" value={scaleMin} onChange={e => setScaleMin(e.target.value)} className="w-20" />
-                <Input placeholder="Max" type="number" value={scaleMax} onChange={e => setScaleMax(e.target.value)} className="w-20" />
-                <Input placeholder="Description" value={scaleDesc} onChange={e => setScaleDesc(e.target.value)} className="flex-1 min-w-[150px]" />
-                <Button onClick={handleAddScale}><Plus className="w-4 h-4 mr-1" /> Add</Button>
-              </CardContent>
-            </Card>
-            <Card className="mt-4">
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow><TableHead>Level</TableHead><TableHead>Grade</TableHead><TableHead>Min</TableHead><TableHead>Max</TableHead><TableHead>Description</TableHead><TableHead>Actions</TableHead></TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {scales.map(s => (
-                      <TableRow key={s.id}>
-                        <TableCell>{s.level.replace("_", " ").toUpperCase()}</TableCell>
-                        <TableCell className="font-bold">{s.grade_letter}</TableCell>
-                        <TableCell>{s.min_mark}</TableCell>
-                        <TableCell>{s.max_mark}</TableCell>
-                        <TableCell className="text-muted-foreground">{s.description}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteScale(s.id)}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -202,21 +222,35 @@ const AdminSettings = () => {
           </TabsContent>
         </Tabs>
 
+        {/* Edit Session Dialog */}
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Edit Session Dates</DialogTitle></DialogHeader>
             {editSession && (
               <div className="space-y-3">
                 <p className="text-sm font-medium">{editSession.academic_year} — {termLabel(editSession.term)}</p>
-                <div>
-                  <label className="text-sm text-muted-foreground">Start Date</label>
-                  <Input type="date" value={editSession.start_date} onChange={e => setEditSession({...editSession, start_date: e.target.value})} />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">End Date</label>
-                  <Input type="date" value={editSession.end_date} onChange={e => setEditSession({...editSession, end_date: e.target.value})} />
-                </div>
+                <div><label className="text-sm text-muted-foreground">Start Date</label><Input type="date" value={editSession.start_date} onChange={e => setEditSession({ ...editSession, start_date: e.target.value })} /></div>
+                <div><label className="text-sm text-muted-foreground">End Date</label><Input type="date" value={editSession.end_date} onChange={e => setEditSession({ ...editSession, end_date: e.target.value })} /></div>
                 <Button className="w-full" onClick={handleEditSession}>Save Changes</Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Scale Dialog */}
+        <Dialog open={editScaleOpen} onOpenChange={setEditScaleOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Edit Grading Scale</DialogTitle></DialogHeader>
+            {editScale && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">{editScale.level.replace("_", " ").toUpperCase()}</p>
+                <Input placeholder="Grade Letter" value={editScale.grade_letter} onChange={e => setEditScale({ ...editScale, grade_letter: e.target.value })} />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input type="number" placeholder="Min %" value={editScale.min_mark} onChange={e => setEditScale({ ...editScale, min_mark: e.target.value })} />
+                  <Input type="number" placeholder="Max %" value={editScale.max_mark} onChange={e => setEditScale({ ...editScale, max_mark: e.target.value })} />
+                </div>
+                <Input placeholder="Description" value={editScale.description || ""} onChange={e => setEditScale({ ...editScale, description: e.target.value })} />
+                <Button className="w-full" onClick={handleEditScale}>Save Changes</Button>
               </div>
             )}
           </DialogContent>

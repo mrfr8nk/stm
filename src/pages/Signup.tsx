@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,8 +23,21 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState("o_level");
+  const [selectedForm, setSelectedForm] = useState("1");
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    supabase.from("classes").select("*").is("deleted_at", null).order("form").order("name")
+      .then(({ data }) => setClasses(data || []));
+  }, []);
+
+  const filteredClasses = classes.filter(c =>
+    c.level === selectedLevel && c.form === parseInt(selectedForm)
+  );
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,14 +58,12 @@ const Signup = () => {
       return;
     }
 
-    // Check role matches
     if (codeData.role !== selectedRole) {
-      toast({ title: "Wrong Code Type", description: `This code is for ${codeData.role}s, not ${selectedRole}s. Please use the correct code.`, variant: "destructive" });
+      toast({ title: "Wrong Code Type", description: `This code is for ${codeData.role}s, not ${selectedRole}s.`, variant: "destructive" });
       setLoading(false);
       return;
     }
 
-    // Check expiry
     if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
       toast({ title: "Code Expired", description: "This access code has expired.", variant: "destructive" });
       setLoading(false);
@@ -82,7 +93,12 @@ const Signup = () => {
     if (codeData.role === "teacher") {
       await supabase.from("teacher_profiles").insert({ user_id: authData.user.id });
     } else if (codeData.role === "student") {
-      await supabase.from("student_profiles").insert({ user_id: authData.user.id, level: "o_level", form: 1 });
+      await supabase.from("student_profiles").insert({
+        user_id: authData.user.id,
+        level: selectedLevel as any,
+        form: parseInt(selectedForm),
+        class_id: selectedClass || null,
+      });
     }
 
     toast({ title: "Account Created!", description: "Welcome to St. Mary's. You can now log in." });
@@ -101,7 +117,6 @@ const Signup = () => {
           <p className="text-muted-foreground mt-2">Select your role and register with an access code</p>
         </div>
 
-        {/* Role Selection */}
         {!selectedRole ? (
           <div className="space-y-4">
             {(["student", "teacher", "admin"] as SignupRole[]).map((role) => {
@@ -125,26 +140,17 @@ const Signup = () => {
                 </Card>
               );
             })}
-
             <p className="text-center text-sm text-muted-foreground mt-4">
               You need an access code from the administration to register.
             </p>
-
             <div className="text-center mt-4 space-y-2">
-              <Link to="/login" className="text-sm text-primary hover:underline">
-                Already have an account? Sign in
-              </Link>
-              <Link to="/" className="text-sm text-muted-foreground hover:underline block">
-                ← Back to website
-              </Link>
+              <Link to="/login" className="text-sm text-primary hover:underline">Already have an account? Sign in</Link>
+              <Link to="/" className="text-sm text-muted-foreground hover:underline block">← Back to website</Link>
             </div>
           </div>
         ) : (
           <div>
-            <button
-              onClick={() => setSelectedRole(null)}
-              className="text-sm text-muted-foreground hover:text-foreground mb-4 flex items-center gap-1"
-            >
+            <button onClick={() => setSelectedRole(null)} className="text-sm text-muted-foreground hover:text-foreground mb-4 flex items-center gap-1">
               ← Choose different role
             </button>
 
@@ -178,6 +184,41 @@ const Signup = () => {
                     <label className="text-sm font-medium text-foreground">Password</label>
                     <Input type="password" placeholder="Minimum 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                   </div>
+
+                  {/* Student-specific: Level, Form, Class */}
+                  {selectedRole === "student" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-sm font-medium text-foreground">Level</label>
+                          <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm" value={selectedLevel} onChange={e => { setSelectedLevel(e.target.value); setSelectedClass(""); }}>
+                            <option value="zjc">ZJC (Form 1-2)</option>
+                            <option value="o_level">O Level (Form 3-4)</option>
+                            <option value="a_level">A Level (Form 5-6)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-foreground">Form</label>
+                          <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm" value={selectedForm} onChange={e => { setSelectedForm(e.target.value); setSelectedClass(""); }}>
+                            {[1, 2, 3, 4, 5, 6].map(f => <option key={f} value={f}>Form {f}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Class</label>
+                        <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+                          <option value="">Select class...</option>
+                          {filteredClasses.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}{c.stream ? ` (${c.stream})` : ""}</option>
+                          ))}
+                        </select>
+                        {filteredClasses.length === 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">No classes available for this level/form. Contact admin.</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Creating account..." : `Create ${roleConfig[selectedRole].label} Account`}
                   </Button>
