@@ -6,27 +6,67 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import schoolLogo from "@/assets/school-logo.png";
+import { Loader2 } from "lucide-react";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [isRecovery, setIsRecovery] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Listen for the PASSWORD_RECOVERY event
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setIsRecovery(true);
+    let resolved = false;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+        if (event === "PASSWORD_RECOVERY") {
+          resolved = true;
+          setIsRecovery(true);
+          setChecking(false);
+        }
       }
     });
 
-    // Also check hash for type=recovery
+    // Check URL for recovery indicators
     const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
-      setIsRecovery(true);
+    const params = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(hash.replace("#", ""));
+
+    const hasRecoveryType = 
+      hash.includes("type=recovery") || 
+      params.get("type") === "recovery" ||
+      hashParams.get("type") === "recovery";
+
+    const hasToken = 
+      hash.includes("access_token") || 
+      params.has("token_hash") ||
+      params.has("code");
+
+    if (hasRecoveryType || hasToken) {
+      // Give Supabase a moment to process the token exchange
+      setTimeout(() => {
+        if (!resolved) {
+          // Check if we have an active session (token was already exchanged)
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+              setIsRecovery(true);
+            }
+            setChecking(false);
+          });
+        }
+      }, 2000);
+    } else {
+      // No recovery params at all — check if there's already a session from a recovery
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        // If user landed here with a session, allow password change
+        if (session) {
+          setIsRecovery(true);
+        }
+        setChecking(false);
+      });
     }
 
     return () => subscription.unsubscribe();
@@ -53,9 +93,23 @@ const ResetPassword = () => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Success", description: "Your password has been updated." });
+      await supabase.auth.signOut();
       navigate("/login");
     }
   };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="py-10">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-3" />
+            <p className="text-muted-foreground">Verifying reset link...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!isRecovery) {
     return (
