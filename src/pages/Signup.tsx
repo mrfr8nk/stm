@@ -191,9 +191,9 @@ const Signup = () => {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-sm font-medium text-foreground">Level</label>
-                          <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm" value={selectedLevel} onChange={e => { setSelectedLevel(e.target.value); setSelectedClass(""); }}>
+                          <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm" value={selectedLevel} onChange={e => { setSelectedLevel(e.target.value); setSelectedClass(""); setSelectedForm(e.target.value === "a_level" ? "5" : "1"); }}>
                             <option value="zjc">ZJC (Form 1-2)</option>
-                            <option value="o_level">O Level (Form 3-4)</option>
+                            <option value="o_level">O Level (Form 1-4)</option>
                             <option value="a_level">A Level (Form 5-6)</option>
                           </select>
                         </div>
