@@ -59,6 +59,8 @@ import AdminApplications from "./pages/admin/AdminApplications";
 import AdminFinance from "./pages/admin/AdminFinance";
 import AdminRankings from "./pages/admin/AdminRankings";
 import AdminMessages from "./pages/admin/AdminMessages";
+import AdminHomepageUpdates from "./pages/admin/AdminHomepageUpdates";
+import AdminStaffGallery from "./pages/admin/AdminStaffGallery";
 
 // Parent pages
 import ParentDashboard from "./pages/parent/ParentDashboard";
@@ -129,6 +131,8 @@ const App = () => (
               <Route path="/admin/fees" element={<ProtectedRoute allowedRoles={["admin"]}><AdminFees /></ProtectedRoute>} />
               <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={["admin"]}><AdminSettings /></ProtectedRoute>} />
               <Route path="/admin/finance" element={<ProtectedRoute allowedRoles={["admin"]}><AdminFinance /></ProtectedRoute>} />
+              <Route path="/admin/homepage" element={<ProtectedRoute allowedRoles={["admin"]}><AdminHomepageUpdates /></ProtectedRoute>} />
+              <Route path="/admin/staff-gallery" element={<ProtectedRoute allowedRoles={["admin"]}><AdminStaffGallery /></ProtectedRoute>} />
 
               {/* Parent Portal */}
               <Route path="/parent" element={<ProtectedRoute allowedRoles={["parent"]}><ParentDashboard /></ProtectedRoute>} />
