@@ -156,8 +156,11 @@ const Login = () => {
                     {loading ? "Signing in..." : `Sign In as ${portalConfig[selectedPortal].label}`}
                   </Button>
                 </form>
-                <div className="mt-4 text-center">
-                  <Link to="/signup" className="text-sm text-primary hover:underline">
+                <div className="mt-4 text-center space-y-2">
+                  <Link to="/forgot-password" className="text-sm text-muted-foreground hover:underline block">
+                    Forgot your password?
+                  </Link>
+                  <Link to="/signup" className="text-sm text-primary hover:underline block">
                     Create an account with access code
                   </Link>
                 </div>
