@@ -283,30 +283,68 @@ const AdminUsers = () => {
                 ))}
               </div>
             )}
-            <div className="flex gap-2 items-end pt-2 border-t">
-              <div className="flex-1">
-                <label className="text-xs font-medium text-muted-foreground">Link a Student</label>
-                <Select value={linkStudentId} onValueChange={setLinkStudentId}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Select student..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {studentUsers.map(s => {
+            <div className="pt-2 border-t space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Link a Student</label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                <Input 
+                  className="h-9 pl-8 text-sm" 
+                  placeholder="Search by name or student ID..." 
+                  value={linkSearchQuery} 
+                  onChange={e => setLinkSearchQuery(e.target.value)} 
+                />
+              </div>
+              {linkSearchQuery.trim().length > 0 && (
+                <div className="max-h-40 overflow-y-auto border rounded-md bg-popover">
+                  {studentUsers
+                    .filter(s => {
                       const sp = studentProfiles.find(sp => sp.user_id === s.user_id);
                       const alreadyLinked = parentLinks.some(l => l.parent_id === selectedUser.user_id && l.student_id === s.user_id);
-                      if (alreadyLinked) return null;
+                      if (alreadyLinked) return false;
+                      const q = linkSearchQuery.toLowerCase();
+                      return (s.full_name || "").toLowerCase().includes(q) || (sp?.student_id || "").toLowerCase().includes(q);
+                    })
+                    .slice(0, 10)
+                    .map(s => {
+                      const sp = studentProfiles.find(sp => sp.user_id === s.user_id);
                       return (
-                        <SelectItem key={s.user_id} value={s.user_id}>
-                          {s.full_name} {sp?.student_id ? `(${sp.student_id})` : ""}
-                        </SelectItem>
+                        <div 
+                          key={s.user_id} 
+                          className={`flex items-center justify-between p-2 hover:bg-accent/50 cursor-pointer text-sm ${linkStudentId === s.user_id ? "bg-accent" : ""}`}
+                          onClick={() => setLinkStudentId(s.user_id)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center text-[10px] font-bold">
+                              {(s.full_name || "S").charAt(0)}
+                            </div>
+                            <span>{s.full_name}</span>
+                            {sp?.student_id && <span className="text-xs text-muted-foreground">({sp.student_id})</span>}
+                          </div>
+                          <span className="text-xs text-muted-foreground">Form {sp?.form || "?"}</span>
+                        </div>
                       );
                     })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button size="sm" onClick={() => handleLinkChild(selectedUser.user_id)} disabled={!linkStudentId || linking}>
-                <UserPlus className="w-4 h-4 mr-1" /> {linking ? "Linking..." : "Link"}
-              </Button>
+                  {studentUsers.filter(s => {
+                    const sp = studentProfiles.find(sp => sp.user_id === s.user_id);
+                    const alreadyLinked = parentLinks.some(l => l.parent_id === selectedUser.user_id && l.student_id === s.user_id);
+                    if (alreadyLinked) return false;
+                    const q = linkSearchQuery.toLowerCase();
+                    return (s.full_name || "").toLowerCase().includes(q) || (sp?.student_id || "").toLowerCase().includes(q);
+                  }).length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-3">No matching students found</p>
+                  )}
+                </div>
+              )}
+              {linkStudentId && (
+                <div className="flex items-center justify-between p-2 rounded-lg border bg-accent/10">
+                  <span className="text-sm font-medium">
+                    Selected: {users.find(u => u.user_id === linkStudentId)?.full_name || linkStudentId}
+                  </span>
+                  <Button size="sm" onClick={() => handleLinkChild(selectedUser.user_id)} disabled={linking}>
+                    <UserPlus className="w-4 h-4 mr-1" /> {linking ? "Linking..." : "Link"}
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
