@@ -56,7 +56,7 @@ const TeacherMonthlyTests = () => {
         : { data: [] };
       const profileMap = new Map((profilesData || []).map(p => [p.user_id, p.full_name]));
       const enrichedStudents = (studentData || []).map(s => ({ ...s, profiles: { full_name: profileMap.get(s.user_id) || "" } }));
-      setStudents(studentData || []);
+      setStudents(enrichedStudents);
 
       const { data: tests } = await supabase.from("monthly_tests")
         .select("*").eq("subject_id", selectedAssignment.subject_id)
