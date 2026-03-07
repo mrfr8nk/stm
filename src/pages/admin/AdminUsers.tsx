@@ -236,6 +236,24 @@ const AdminUsers = () => {
 
                 {selectedUser.studentProfile && (
                   <>
+                    {/* Transfer/Status Banner */}
+                    <div className={`flex items-center justify-between p-3 rounded-lg border ${selectedUser.studentProfile.is_active === false ? "bg-destructive/5 border-destructive/20" : "bg-green-500/5 border-green-500/20"}`}>
+                      <div className="flex items-center gap-2">
+                        {selectedUser.studentProfile.is_active === false ? (
+                          <><UserX className="w-5 h-5 text-destructive" /><div><p className="font-medium text-destructive">Transferred / Deactivated</p><p className="text-xs text-muted-foreground">This student is no longer active</p></div></>
+                        ) : (
+                          <><UserCheck className="w-5 h-5 text-green-600" /><div><p className="font-medium text-green-700">Active Student</p><p className="text-xs text-muted-foreground">Student ID: <span className="font-mono font-semibold">{selectedUser.studentProfile.student_id || "—"}</span></p></div></>
+                        )}
+                      </div>
+                      <Button
+                        variant={selectedUser.studentProfile.is_active === false ? "outline" : "destructive"}
+                        size="sm"
+                        onClick={() => handleTransferStudent(selectedUser.user_id, selectedUser.studentProfile.is_active !== false)}
+                      >
+                        {selectedUser.studentProfile.is_active === false ? <><UserCheck className="w-4 h-4 mr-1" /> Reactivate</> : <><UserX className="w-4 h-4 mr-1" /> Transfer</>}
+                      </Button>
+                    </div>
+
                     <Card>
                       <CardHeader>
                         <div className="flex items-center justify-between">
