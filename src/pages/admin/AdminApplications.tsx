@@ -88,7 +88,26 @@ const AdminApplications = () => {
         await supabase.from("profiles").update({ phone: app.phone }).eq("user_id", app.user_id);
       }
 
+      // Fetch generated student_id for email
+      const { data: newSp } = await supabase.from("student_profiles").select("student_id").eq("user_id", app.user_id).single();
+
+      // Send approval email notification
+      try {
+        await supabase.functions.invoke("send-notification", {
+          body: { type: "approved", email: app.email, full_name: app.full_name, student_id: newSp?.student_id },
+        });
+      } catch (e) { console.error("Email notification failed:", e); }
+
       setApproving(false);
+    }
+
+    if (status === "rejected" && app) {
+      // Send rejection email notification
+      try {
+        await supabase.functions.invoke("send-notification", {
+          body: { type: "rejected", email: app.email, full_name: app.full_name },
+        });
+      } catch (e) { console.error("Email notification failed:", e); }
     }
 
     const { error } = await supabase.from("applications").update({
