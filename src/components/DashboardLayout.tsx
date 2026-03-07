@@ -19,6 +19,7 @@ const teacherNav: NavItem[] = [
   { label: "Dashboard", path: "/teacher", icon: Home },
   { label: "My Classes", path: "/teacher/classes", icon: Users },
   { label: "Set Grades", path: "/teacher/grades", icon: BookOpen },
+  { label: "Monthly Tests", path: "/teacher/monthly-tests", icon: BarChart3 },
   { label: "Attendance", path: "/teacher/attendance", icon: ClipboardCheck },
   { label: "Report Cards", path: "/teacher/reports", icon: FileText },
   { label: "Announcements", path: "/teacher/announcements", icon: Bell },
