@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Search, GraduationCap, BookOpen, Shield, Trash2, Eye, ArrowUpDown, Mail, Phone } from "lucide-react";
+import { Users, Search, GraduationCap, BookOpen, Shield, Trash2, Eye, ArrowUpDown, Mail, Phone, Save, Edit } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const AdminUsers = () => {
@@ -21,6 +21,9 @@ const AdminUsers = () => {
   const [sortField, setSortField] = useState<string>("full_name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [detailOpen, setDetailOpen] = useState(false);
+  const [editingSP, setEditingSP] = useState(false);
+  const [spForm, setSpForm] = useState<any>({});
+  const [saving, setSaving] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -30,7 +33,6 @@ const AdminUsers = () => {
       supabase.from("student_profiles").select("*"),
       supabase.from("teacher_profiles").select("*"),
     ]);
-
     const roleMap: Record<string, string> = {};
     (rolesRes.data || []).forEach((r: any) => { roleMap[r.user_id] = r.role; });
     setUsers((profilesRes.data || []).map((p: any) => ({ ...p, role: roleMap[p.user_id] || "unassigned" })));
@@ -42,13 +44,13 @@ const AdminUsers = () => {
   useEffect(() => { fetchData(); }, []);
 
   const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to remove ${userName}? This will delete their role and profile data.`)) return;
+    if (!confirm(`Are you sure you want to remove ${userName}?`)) return;
     await Promise.all([
       supabase.from("user_roles").delete().eq("user_id", userId),
       supabase.from("student_profiles").delete().eq("user_id", userId),
       supabase.from("teacher_profiles").delete().eq("user_id", userId),
     ]);
-    toast({ title: "User Removed", description: `${userName}'s role and profile data has been removed.` });
+    toast({ title: "User Removed" });
     fetchData();
   };
 
@@ -56,7 +58,31 @@ const AdminUsers = () => {
     const sp = studentProfiles.find((s: any) => s.user_id === user.user_id);
     const tp = teacherProfiles.find((t: any) => t.user_id === user.user_id);
     setSelectedUser({ ...user, studentProfile: sp, teacherProfile: tp });
+    if (sp) {
+      setSpForm({
+        national_id: sp.national_id || "", birth_cert_number: sp.birth_cert_number || "",
+        date_of_birth: sp.date_of_birth || "", guardian_name: sp.guardian_name || "",
+        guardian_phone: sp.guardian_phone || "", guardian_email: sp.guardian_email || "",
+        address: sp.address || "", emergency_contact: sp.emergency_contact || "",
+        emergency_phone: sp.emergency_phone || "", blood_type: sp.blood_type || "",
+        allergies: sp.allergies || "", medical_conditions: sp.medical_conditions || "",
+      });
+    }
+    setEditingSP(false);
     setDetailOpen(true);
+  };
+
+  const handleSaveStudentProfile = async () => {
+    if (!selectedUser?.studentProfile) return;
+    setSaving(true);
+    const { error } = await supabase.from("student_profiles").update(spForm).eq("user_id", selectedUser.user_id);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else {
+      toast({ title: "Student Profile Updated" });
+      setEditingSP(false);
+      fetchData();
+    }
+    setSaving(false);
   };
 
   const sorted = (list: any[]) => {
@@ -72,24 +98,11 @@ const AdminUsers = () => {
     else { setSortField(field); setSortDir("asc"); }
   };
 
-  const filterByRole = (role: string) => {
-    return users.filter(u => u.role === role && (
-      (u.full_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (u.email || "").toLowerCase().includes(search.toLowerCase())
-    ));
-  };
-
-  const allFiltered = users.filter(u =>
-    (u.full_name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (u.email || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filterByRole = (role: string) => users.filter(u => u.role === role && ((u.full_name || "").toLowerCase().includes(search.toLowerCase()) || (u.email || "").toLowerCase().includes(search.toLowerCase())));
+  const allFiltered = users.filter(u => (u.full_name || "").toLowerCase().includes(search.toLowerCase()) || (u.email || "").toLowerCase().includes(search.toLowerCase()));
 
   const roleBadge = (role: string) => {
-    const colors: Record<string, string> = {
-      admin: "bg-primary text-primary-foreground",
-      teacher: "bg-secondary text-secondary-foreground",
-      student: "bg-accent text-accent-foreground",
-    };
+    const colors: Record<string, string> = { admin: "bg-primary text-primary-foreground", teacher: "bg-secondary text-secondary-foreground", student: "bg-accent text-accent-foreground" };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[role] || "bg-muted text-muted-foreground"}`}>{role}</span>;
   };
 
@@ -116,49 +129,42 @@ const AdminUsers = () => {
           <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
         ) : sorted(data).length === 0 ? (
           <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No users found.</TableCell></TableRow>
-        ) : (
-          sorted(data).map(u => (
-            <TableRow key={u.id}>
-              <TableCell className="font-medium">{u.full_name}</TableCell>
-              <TableCell className="text-sm">{u.email}</TableCell>
-              <TableCell className="text-sm">{u.phone || "—"}</TableCell>
-              {showRole && <TableCell>{roleBadge(u.role)}</TableCell>}
-              <TableCell className="text-sm text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => viewDetails(u)}><Eye className="w-4 h-4" /></Button>
-                  {u.role !== "admin" && (
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteUser(u.user_id, u.full_name)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          ))
-        )}
+        ) : sorted(data).map(u => (
+          <TableRow key={u.id}>
+            <TableCell className="font-medium">{u.full_name}</TableCell>
+            <TableCell className="text-sm">{u.email}</TableCell>
+            <TableCell className="text-sm">{u.phone || "—"}</TableCell>
+            {showRole && <TableCell>{roleBadge(u.role)}</TableCell>}
+            <TableCell className="text-sm text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</TableCell>
+            <TableCell>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" onClick={() => viewDetails(u)}><Eye className="w-4 h-4" /></Button>
+                {u.role !== "admin" && <Button variant="ghost" size="sm" onClick={() => handleDeleteUser(u.user_id, u.full_name)}><Trash2 className="w-4 h-4 text-destructive" /></Button>}
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
       </TableBody>
     </Table>
   );
 
-  const stats = {
-    total: users.length,
-    admins: users.filter(u => u.role === "admin").length,
-    teachers: users.filter(u => u.role === "teacher").length,
-    students: users.filter(u => u.role === "student").length,
-  };
+  const stats = { total: users.length, admins: users.filter(u => u.role === "admin").length, teachers: users.filter(u => u.role === "teacher").length, students: users.filter(u => u.role === "student").length };
+
+  const spField = (label: string, key: string, type = "text") => (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <Input className="h-8 text-sm" type={type} value={editingSP ? spForm[key] : (selectedUser?.studentProfile?.[key] || "—")} disabled={!editingSP}
+        onChange={e => setSpForm({ ...spForm, [key]: e.target.value })} />
+    </div>
+  );
 
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">User Management</h1>
-            <p className="text-muted-foreground text-sm">Manage all system users</p>
-          </div>
+          <div><h1 className="font-display text-2xl font-bold text-foreground">User Management</h1><p className="text-muted-foreground text-sm">Manage all system users</p></div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: "Total Users", value: stats.total, icon: Users, color: "text-primary" },
@@ -166,22 +172,18 @@ const AdminUsers = () => {
             { label: "Teachers", value: stats.teachers, icon: BookOpen, color: "text-secondary" },
             { label: "Students", value: stats.students, icon: GraduationCap, color: "text-accent" },
           ].map(s => (
-            <Card key={s.label}>
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className={`p-2 rounded-lg bg-muted ${s.color}`}><s.icon className="w-5 h-5" /></div>
-                <div><p className="text-xl font-bold">{s.value}</p><p className="text-xs text-muted-foreground">{s.label}</p></div>
-              </CardContent>
-            </Card>
+            <Card key={s.label}><CardContent className="flex items-center gap-3 p-4">
+              <div className={`p-2 rounded-lg bg-muted ${s.color}`}><s.icon className="w-5 h-5" /></div>
+              <div><p className="text-xl font-bold">{s.value}</p><p className="text-xs text-muted-foreground">{s.label}</p></div>
+            </CardContent></Card>
           ))}
         </div>
 
-        {/* Search */}
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
 
-        {/* Tabs */}
         <Tabs defaultValue="all">
           <TabsList>
             <TabsTrigger value="all">All Users ({stats.total})</TabsTrigger>
@@ -189,33 +191,14 @@ const AdminUsers = () => {
             <TabsTrigger value="students">Students ({stats.students})</TabsTrigger>
             <TabsTrigger value="admins">Admins ({stats.admins})</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="all">
-            <Card><CardContent className="p-0"><UserTable data={allFiltered} /></CardContent></Card>
-          </TabsContent>
-          <TabsContent value="teachers">
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5" /> Teachers</CardTitle></CardHeader>
-              <CardContent className="p-0"><UserTable data={filterByRole("teacher")} showRole={false} /></CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="students">
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><GraduationCap className="w-5 h-5" /> Students</CardTitle></CardHeader>
-              <CardContent className="p-0"><UserTable data={filterByRole("student")} showRole={false} /></CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="admins">
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="w-5 h-5" /> Administrators</CardTitle></CardHeader>
-              <CardContent className="p-0"><UserTable data={filterByRole("admin")} showRole={false} /></CardContent>
-            </Card>
-          </TabsContent>
+          <TabsContent value="all"><Card><CardContent className="p-0"><UserTable data={allFiltered} /></CardContent></Card></TabsContent>
+          <TabsContent value="teachers"><Card><CardHeader><CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5" /> Teachers</CardTitle></CardHeader><CardContent className="p-0"><UserTable data={filterByRole("teacher")} showRole={false} /></CardContent></Card></TabsContent>
+          <TabsContent value="students"><Card><CardHeader><CardTitle className="flex items-center gap-2"><GraduationCap className="w-5 h-5" /> Students</CardTitle></CardHeader><CardContent className="p-0"><UserTable data={filterByRole("student")} showRole={false} /></CardContent></Card></TabsContent>
+          <TabsContent value="admins"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Shield className="w-5 h-5" /> Administrators</CardTitle></CardHeader><CardContent className="p-0"><UserTable data={filterByRole("admin")} showRole={false} /></CardContent></Card></TabsContent>
         </Tabs>
 
-        {/* Detail Dialog */}
         <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>User Details</DialogTitle></DialogHeader>
             {selectedUser && (
               <div className="space-y-4">
@@ -233,19 +216,52 @@ const AdminUsers = () => {
                   <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground" /> {selectedUser.phone || "—"}</div>
                   <div><span className="text-muted-foreground">Joined:</span> {new Date(selectedUser.created_at).toLocaleDateString()}</div>
                 </div>
+
                 {selectedUser.studentProfile && (
-                  <Card>
-                    <CardHeader><CardTitle className="text-sm">Student Profile</CardTitle></CardHeader>
-                    <CardContent className="text-sm space-y-1">
-                      <p><span className="text-muted-foreground">Student ID:</span> {selectedUser.studentProfile.student_id || "—"}</p>
-                      <p><span className="text-muted-foreground">Form:</span> {selectedUser.studentProfile.form}</p>
-                      <p><span className="text-muted-foreground">Level:</span> {selectedUser.studentProfile.level?.replace("_", " ").toUpperCase()}</p>
-                      <p><span className="text-muted-foreground">Guardian:</span> {selectedUser.studentProfile.guardian_name || "—"}</p>
-                      <p><span className="text-muted-foreground">Guardian Phone:</span> {selectedUser.studentProfile.guardian_phone || "—"}</p>
-                      <p><span className="text-muted-foreground">Active:</span> {selectedUser.studentProfile.is_active ? "Yes" : "No"}</p>
-                    </CardContent>
-                  </Card>
+                  <>
+                    <Card>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-sm flex items-center gap-2"><Shield className="w-4 h-4" /> Identity & Guardian</CardTitle>
+                          <Button variant="ghost" size="sm" onClick={() => setEditingSP(!editingSP)}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-3">
+                          {spField("Student ID", "student_id")}
+                          {spField("Form", "form")}
+                          {spField("National ID", "national_id")}
+                          {spField("Birth Cert No.", "birth_cert_number")}
+                          {spField("Date of Birth", "date_of_birth", editingSP ? "date" : "text")}
+                          {spField("Guardian Name", "guardian_name")}
+                          {spField("Guardian Phone", "guardian_phone")}
+                          {spField("Guardian Email", "guardian_email")}
+                          {spField("Address", "address")}
+                          {spField("Emergency Contact", "emergency_contact")}
+                          {spField("Emergency Phone", "emergency_phone")}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader><CardTitle className="text-sm flex items-center gap-2">❤️ Medical Information</CardTitle></CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-3">
+                          {spField("Blood Type", "blood_type")}
+                          {spField("Allergies", "allergies")}
+                          <div className="col-span-2">{spField("Medical Conditions", "medical_conditions")}</div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    {editingSP && (
+                      <Button className="w-full" onClick={handleSaveStudentProfile} disabled={saving}>
+                        <Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save Student Records"}
+                      </Button>
+                    )}
+                  </>
                 )}
+
                 {selectedUser.teacherProfile && (
                   <Card>
                     <CardHeader><CardTitle className="text-sm">Teacher Profile</CardTitle></CardHeader>
