@@ -101,12 +101,12 @@ const Admissions = () => {
                     <tr key={row.year} className={i % 2 === 0 ? "bg-card" : "bg-muted"}>
                       <td className="px-6 py-4 font-body font-semibold text-foreground">{row.year}</td>
                       <td className="px-6 py-4 font-body text-foreground">
-                        <span className="inline-flex items-center gap-1 text-green-600 font-semibold">
+                        <span className="inline-flex items-center gap-1 text-success font-semibold">
                           <Award className="w-4 h-4" /> {row.oLevel}
                         </span>
                       </td>
                       <td className="px-6 py-4 font-body text-foreground">
-                        <span className="inline-flex items-center gap-1 text-green-600 font-semibold">
+                        <span className="inline-flex items-center gap-1 text-success font-semibold">
                           <Award className="w-4 h-4" /> {row.aLevel}
                         </span>
                       </td>
@@ -130,7 +130,7 @@ const Admissions = () => {
             <div className="grid sm:grid-cols-2 gap-4">
               {requirements.map((req) => (
                 <div key={req} className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
                   <p className="font-body text-foreground">{req}</p>
                 </div>
               ))}
