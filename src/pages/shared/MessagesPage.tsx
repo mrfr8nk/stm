@@ -122,24 +122,23 @@ const MessagesPage = () => {
       return;
     }
 
-    const convId = crypto.randomUUID();
-    const { error } = await supabase.from("conversations").insert({
-      id: convId,
-      title: convTitle || null,
-      type: "direct",
+    const { data: conversationId, error } = await supabase.rpc("create_direct_conversation", {
+      _recipient_id: selectedRecipient.user_id,
+      _title: convTitle || null,
     });
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    if (error || !conversationId) {
+      toast({ title: "Error", description: error?.message || "Failed to create conversation", variant: "destructive" });
       return;
     }
 
-    const conv = { id: convId, title: convTitle || null, type: "direct", created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-
-    await supabase.from("conversation_participants").insert([
-      { conversation_id: conv.id, user_id: user.id },
-      { conversation_id: conv.id, user_id: selectedRecipient.user_id },
-    ]);
+    const conv = {
+      id: conversationId as string,
+      title: convTitle || null,
+      type: "direct",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
     setNewDialogOpen(false);
     setSelectedRecipient(null);

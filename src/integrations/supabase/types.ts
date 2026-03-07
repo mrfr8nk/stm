@@ -933,6 +933,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_direct_conversation: {
+        Args: { _recipient_id: string; _title?: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
