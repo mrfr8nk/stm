@@ -6,11 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { BarChart3, Save, Plus, Trash2, Edit, TrendingUp, TrendingDown, Award } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  BarChart3, Save, Trash2, Edit, TrendingUp, TrendingDown,
+  Award, Users, Download, ArrowUpDown
+} from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, LineChart, Line, Legend
+} from "recharts";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -27,8 +32,10 @@ const TeacherMonthlyTests = () => {
   const [existingTests, setExistingTests] = useState<any[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [editMark, setEditMark] = useState("");
-  const [stats, setStats] = useState({ highest: 0, lowest: 0, average: 0, total: 0 });
+  const [stats, setStats] = useState({ highest: 0, lowest: 0, average: 0, total: 0, highestName: "", lowestName: "" });
   const [monthlyTrend, setMonthlyTrend] = useState<any[]>([]);
+  const [sortBy, setSortBy] = useState<"name" | "mark">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     if (!user) return;
@@ -54,27 +61,34 @@ const TeacherMonthlyTests = () => {
       (tests || []).forEach(t => { markMap[t.student_id] = t.mark.toString(); });
       setMarks(markMap);
 
-      // Stats
-      if (tests && tests.length > 0) {
-        const ms = tests.map(t => Number(t.mark));
-        setStats({ highest: Math.max(...ms), lowest: Math.min(...ms), average: Math.round(ms.reduce((a, b) => a + b, 0) / ms.length), total: ms.length });
+      // Stats with student names
+      if (tests && tests.length > 0 && studentData) {
+        const ms = tests.map(t => ({ mark: Number(t.mark), studentId: t.student_id }));
+        const highest = ms.reduce((a, b) => a.mark > b.mark ? a : b);
+        const lowest = ms.reduce((a, b) => a.mark < b.mark ? a : b);
+        const avg = Math.round(ms.reduce((a, b) => a + b.mark, 0) / ms.length);
+        const getName = (sid: string) => studentData.find(s => s.user_id === sid)?.profiles?.full_name || "Unknown";
+        setStats({
+          highest: highest.mark, lowest: lowest.mark, average: avg, total: ms.length,
+          highestName: getName(highest.studentId), lowestName: getName(lowest.studentId)
+        });
       } else {
-        setStats({ highest: 0, lowest: 0, average: 0, total: 0 });
+        setStats({ highest: 0, lowest: 0, average: 0, total: 0, highestName: "", lowestName: "" });
       }
 
       // Monthly trend
       const { data: allTests } = await supabase.from("monthly_tests")
         .select("month, mark").eq("subject_id", selectedAssignment.subject_id)
         .eq("class_id", selectedAssignment.class_id).eq("academic_year", year).is("deleted_at", null);
-      
+
       if (allTests && allTests.length > 0) {
         const trendMap: Record<number, number[]> = {};
         allTests.forEach(t => { if (!trendMap[t.month]) trendMap[t.month] = []; trendMap[t.month].push(Number(t.mark)); });
-        setMonthlyTrend(Object.entries(trendMap).map(([m, marks]) => ({
+        setMonthlyTrend(Object.entries(trendMap).map(([m, mks]) => ({
           month: MONTHS[Number(m) - 1]?.substring(0, 3),
-          average: Math.round(marks.reduce((a, b) => a + b, 0) / marks.length),
-          highest: Math.max(...marks),
-          lowest: Math.min(...marks),
+          average: Math.round(mks.reduce((a, b) => a + b, 0) / mks.length),
+          highest: Math.max(...mks),
+          lowest: Math.min(...mks),
         })).sort((a, b) => MONTHS.findIndex(m => m.startsWith(a.month)) - MONTHS.findIndex(m => m.startsWith(b.month))));
       } else {
         setMonthlyTrend([]);
@@ -112,12 +126,26 @@ const TeacherMonthlyTests = () => {
     await supabase.from("monthly_tests").update({ mark: parseFloat(editMark) }).eq("id", editId);
     toast({ title: "Updated" });
     setEditId(null);
-    // Refresh
     if (selectedAssignment) {
       const { data } = await supabase.from("monthly_tests").select("*").eq("subject_id", selectedAssignment.subject_id)
         .eq("class_id", selectedAssignment.class_id).eq("month", month).eq("academic_year", year).is("deleted_at", null);
       setExistingTests(data || []);
     }
+  };
+
+  const downloadResults = () => {
+    const headers = ["#", "Student Name", "Mark (%)", "Grade"];
+    const rows = sortedStudents.map((s, i) => {
+      const mark = marks[s.user_id] || "";
+      const grade = mark ? (Number(mark) >= 75 ? "A" : Number(mark) >= 60 ? "B" : Number(mark) >= 50 ? "C" : Number(mark) >= 40 ? "D" : "F") : "";
+      return [i + 1, s.profiles?.full_name || "", mark, grade];
+    });
+    const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url;
+    a.download = `monthly-test-${selectedAssignment?.subjects?.name}-${MONTHS[month - 1]}-${year}.csv`; a.click();
+    URL.revokeObjectURL(url);
   };
 
   const getMarkColor = (mark: number) => {
@@ -126,10 +154,24 @@ const TeacherMonthlyTests = () => {
     return "text-red-600 bg-red-500/10";
   };
 
+  const sortedStudents = [...students].sort((a, b) => {
+    if (sortBy === "mark") {
+      const am = Number(marks[a.user_id] || 0);
+      const bm = Number(marks[b.user_id] || 0);
+      return sortDir === "asc" ? am - bm : bm - am;
+    }
+    const an = a.profiles?.full_name || "";
+    const bn = b.profiles?.full_name || "";
+    return sortDir === "asc" ? an.localeCompare(bn) : bn.localeCompare(an);
+  });
+
   return (
     <DashboardLayout role="teacher">
       <div className="space-y-6">
-        <h1 className="font-display text-2xl font-bold text-foreground">Monthly Tests</h1>
+        <div>
+          <h1 className="font-display text-2xl font-bold text-foreground">Monthly Tests</h1>
+          <p className="text-sm text-muted-foreground">Record and analyse monthly test results</p>
+        </div>
 
         <div className="flex flex-wrap gap-3 items-center">
           <select className="border border-input rounded-lg px-3 py-2 bg-background text-foreground text-sm" value={month} onChange={e => setMonth(Number(e.target.value))}>
@@ -140,60 +182,107 @@ const TeacherMonthlyTests = () => {
           </select>
         </div>
 
+        {/* Assignment Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {assignments.map(a => (
-            <Card key={a.id} className={`cursor-pointer transition-all hover:shadow-md ${selectedAssignment?.id === a.id ? "ring-2 ring-primary" : ""}`} onClick={() => setSelectedAssignment(a)}>
+            <Card key={a.id} className={`cursor-pointer transition-all hover:shadow-md ${selectedAssignment?.id === a.id ? "ring-2 ring-primary bg-primary/5" : ""}`} onClick={() => setSelectedAssignment(a)}>
               <CardContent className="p-4">
                 <p className="font-bold text-foreground">{a.subjects?.name || "Subject"}</p>
                 <p className="text-sm text-muted-foreground">{a.classes?.name || "Class"}</p>
               </CardContent>
             </Card>
           ))}
+          {assignments.length === 0 && <p className="text-muted-foreground">No assignments found.</p>}
         </div>
 
         {selectedAssignment && (
           <>
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
-                  <div><p className="text-xl font-bold text-green-600">{stats.highest}%</p><p className="text-xs text-muted-foreground">Highest</p></div>
+              <Card className="border-l-4 border-l-green-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="w-6 h-6 text-green-600" />
+                    <div>
+                      <p className="text-xl font-bold text-green-600">{stats.highest}%</p>
+                      <p className="text-xs text-muted-foreground">Highest</p>
+                      {stats.highestName && <p className="text-[10px] text-green-600 font-medium truncate max-w-[120px]">{stats.highestName}</p>}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <TrendingDown className="w-6 h-6 text-red-600" />
-                  <div><p className="text-xl font-bold text-red-600">{stats.lowest}%</p><p className="text-xs text-muted-foreground">Lowest</p></div>
+              <Card className="border-l-4 border-l-red-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <TrendingDown className="w-6 h-6 text-red-600" />
+                    <div>
+                      <p className="text-xl font-bold text-red-600">{stats.lowest}%</p>
+                      <p className="text-xs text-muted-foreground">Lowest</p>
+                      {stats.lowestName && <p className="text-[10px] text-red-600 font-medium truncate max-w-[120px]">{stats.lowestName}</p>}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 flex items-center gap-3">
                   <Award className="w-6 h-6 text-primary" />
-                  <div><p className="text-xl font-bold text-primary">{stats.average}%</p><p className="text-xs text-muted-foreground">Average</p></div>
+                  <div><p className="text-xl font-bold text-primary">{stats.average}%</p><p className="text-xs text-muted-foreground">Class Average</p></div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 flex items-center gap-3">
-                  <BarChart3 className="w-6 h-6 text-secondary" />
-                  <div><p className="text-xl font-bold">{stats.total}</p><p className="text-xs text-muted-foreground">Recorded</p></div>
+                  <Users className="w-6 h-6 text-muted-foreground" />
+                  <div><p className="text-xl font-bold">{stats.total}/{students.length}</p><p className="text-xs text-muted-foreground">Recorded</p></div>
                 </CardContent>
               </Card>
             </div>
 
             {/* Trend Chart */}
-            {monthlyTrend.length > 0 && (
+            {monthlyTrend.length > 1 && (
               <Card>
-                <CardHeader><CardTitle className="text-lg">Monthly Trend — {year}</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg">Performance Trend — {year}</CardTitle></CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={monthlyTrend}>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={monthlyTrend}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                       <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
                       <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-                      <Bar dataKey="average" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Average" />
-                      <Bar dataKey="highest" fill="#10b981" radius={[4, 4, 0, 0]} name="Highest" />
+                      <Legend />
+                      <Line type="monotone" dataKey="average" stroke="hsl(var(--primary))" strokeWidth={2} name="Average" dot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="highest" stroke="#10b981" strokeWidth={2} name="Highest" dot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="lowest" stroke="#ef4444" strokeWidth={2} name="Lowest" dot={{ r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {monthlyTrend.length === 1 && (
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Distribution — {MONTHS[month - 1]} {year}</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={(() => {
+                      const ranges = [
+                        { name: "75-100", count: 0 }, { name: "60-74", count: 0 },
+                        { name: "50-59", count: 0 }, { name: "40-49", count: 0 }, { name: "0-39", count: 0 }
+                      ];
+                      existingTests.forEach(t => {
+                        const m = Number(t.mark);
+                        if (m >= 75) ranges[0].count++;
+                        else if (m >= 60) ranges[1].count++;
+                        else if (m >= 50) ranges[2].count++;
+                        else if (m >= 40) ranges[3].count++;
+                        else ranges[4].count++;
+                      });
+                      return ranges.filter(r => r.count > 0);
+                    })()}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                      <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Students" />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -203,26 +292,45 @@ const TeacherMonthlyTests = () => {
             {/* Mark Entry */}
             {students.length > 0 && (
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
                   <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5" /> {selectedAssignment.subjects?.name} — {MONTHS[month - 1]} {year}
                   </CardTitle>
-                  <Button onClick={handleSave} disabled={saving}><Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save"}</Button>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button variant="outline" size="sm" onClick={() => {
+                      setSortBy(prev => prev === "mark" ? "name" : "mark");
+                      setSortDir("desc");
+                    }}>
+                      <ArrowUpDown className="w-4 h-4 mr-1" /> Sort by {sortBy === "name" ? "Mark" : "Name"}
+                    </Button>
+                    {existingTests.length > 0 && (
+                      <Button variant="outline" size="sm" onClick={downloadResults}>
+                        <Download className="w-4 h-4 mr-1" /> Export
+                      </Button>
+                    )}
+                    <Button onClick={handleSave} disabled={saving}>
+                      <Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save All"}
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {students.map((s, i) => {
+                    {sortedStudents.map((s, i) => {
                       const mark = marks[s.user_id] || "";
                       const existing = existingTests.find(t => t.student_id === s.user_id);
                       return (
-                        <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                          <span className="w-8 text-sm text-muted-foreground">{i + 1}.</span>
-                          <span className="flex-1 font-medium text-foreground">{s.profiles?.full_name || "Student"}</span>
+                        <div key={s.id} className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                          mark ? (Number(mark) >= 75 ? "bg-green-500/5 border-l-4 border-l-green-500" : Number(mark) >= 50 ? "bg-yellow-500/5 border-l-4 border-l-yellow-500" : "bg-red-500/5 border-l-4 border-l-red-500") : "bg-muted/50 border-l-4 border-l-transparent"
+                        }`}>
+                          <span className="w-8 text-sm text-muted-foreground font-mono">{i + 1}.</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-foreground">{s.profiles?.full_name || "Student"}</span>
+                          </div>
                           <Input type="number" min={0} max={100} placeholder="Mark" className="w-24"
                             value={mark} onChange={e => setMarks(prev => ({ ...prev, [s.user_id]: e.target.value }))} />
                           {mark && (
                             <span className={`px-2 py-1 rounded text-xs font-bold ${getMarkColor(Number(mark))}`}>
-                              {Number(mark) >= 75 ? "A" : Number(mark) >= 50 ? "C" : "F"}
+                              {Number(mark) >= 75 ? "A" : Number(mark) >= 60 ? "B" : Number(mark) >= 50 ? "C" : Number(mark) >= 40 ? "D" : "F"}
                             </span>
                           )}
                           {existing && (
@@ -230,7 +338,7 @@ const TeacherMonthlyTests = () => {
                               <Button variant="ghost" size="sm" onClick={() => { setEditId(existing.id); setEditMark(existing.mark.toString()); }}>
                                 <Edit className="w-3 h-3" />
                               </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleDelete(existing.id)} className="text-red-500 hover:text-red-700">
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(existing.id)} className="text-destructive hover:text-destructive">
                                 <Trash2 className="w-3 h-3" />
                               </Button>
                             </div>
@@ -245,12 +353,11 @@ const TeacherMonthlyTests = () => {
           </>
         )}
 
-        {/* Edit Dialog */}
         <Dialog open={!!editId} onOpenChange={() => setEditId(null)}>
           <DialogContent className="max-w-sm">
             <DialogHeader><DialogTitle>Edit Mark</DialogTitle></DialogHeader>
             <Input type="number" min={0} max={100} value={editMark} onChange={e => setEditMark(e.target.value)} />
-            <Button onClick={handleEditSave}>Save</Button>
+            <Button onClick={handleEditSave} className="w-full">Save</Button>
           </DialogContent>
         </Dialog>
       </div>

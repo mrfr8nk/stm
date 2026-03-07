@@ -5,9 +5,17 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { ClipboardCheck, Save, Check, X, Clock, Users, TrendingUp } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import {
+  ClipboardCheck, Save, Check, X, Clock, Users, TrendingUp,
+  Download, Search, CalendarDays
+} from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, Legend
+} from "recharts";
 
 const TeacherAttendance = () => {
   const { user } = useAuth();
@@ -20,6 +28,7 @@ const TeacherAttendance = () => {
   const [saving, setSaving] = useState(false);
   const [weeklyStats, setWeeklyStats] = useState<any[]>([]);
   const [summaryStats, setSummaryStats] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -58,9 +67,11 @@ const TeacherAttendance = () => {
         present: s.present || 0, absent: s.absent || 0, late: s.late || 0,
       })));
 
-      // Summary pie
       const summary: Record<string, number> = { Present: 0, Absent: 0, Late: 0, Excused: 0 };
-      (weekData || []).forEach(a => { summary[a.status.charAt(0).toUpperCase() + a.status.slice(1)] = (summary[a.status.charAt(0).toUpperCase() + a.status.slice(1)] || 0) + 1; });
+      (weekData || []).forEach(a => {
+        const key = a.status.charAt(0).toUpperCase() + a.status.slice(1);
+        summary[key] = (summary[key] || 0) + 1;
+      });
       setSummaryStats(Object.entries(summary).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value })));
     };
     fetchAttendance();
@@ -78,7 +89,10 @@ const TeacherAttendance = () => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Attendance Saved", description: `Saved for ${records.length} students.` });
-      await supabase.from("activity_log").insert({ user_id: user.id, action: "Marked attendance", details: `${date} — ${records.length} students`, entity_type: "attendance" });
+      await supabase.from("activity_log").insert({
+        user_id: user.id, action: "Marked attendance",
+        details: `${date} — ${records.length} students`, entity_type: "attendance"
+      });
     }
     setSaving(false);
   };
@@ -89,23 +103,48 @@ const TeacherAttendance = () => {
     setAttendance(map);
   };
 
-  const statusConfig: Record<string, { bg: string; text: string; border: string; icon: any }> = {
-    present: { bg: "bg-green-500/15", text: "text-green-700", border: "border-green-500", icon: Check },
-    absent: { bg: "bg-red-500/15", text: "text-red-700", border: "border-red-500", icon: X },
-    late: { bg: "bg-yellow-500/15", text: "text-yellow-700", border: "border-yellow-500", icon: Clock },
-    excused: { bg: "bg-blue-500/15", text: "text-blue-700", border: "border-blue-500", icon: Users },
+  const downloadRegister = () => {
+    const headers = ["#", "Student Name", "Student ID", "Status"];
+    const rows = filteredStudents.map((s, i) => [
+      i + 1, s.profiles?.full_name || "", s.student_id || "", attendance[s.user_id] || "unmarked"
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url;
+    a.download = `attendance-${date}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const statusConfig: Record<string, { bg: string; text: string; border: string; icon: any; label: string }> = {
+    present: { bg: "bg-green-500/15", text: "text-green-700", border: "border-green-500", icon: Check, label: "P" },
+    absent: { bg: "bg-red-500/15", text: "text-red-700", border: "border-red-500", icon: X, label: "A" },
+    late: { bg: "bg-yellow-500/15", text: "text-yellow-700", border: "border-yellow-500", icon: Clock, label: "L" },
+    excused: { bg: "bg-blue-500/15", text: "text-blue-700", border: "border-blue-500", icon: CalendarDays, label: "E" },
   };
 
   const presentCount = Object.values(attendance).filter(v => v === "present").length;
   const absentCount = Object.values(attendance).filter(v => v === "absent").length;
+  const lateCount = Object.values(attendance).filter(v => v === "late").length;
+
+  const filteredStudents = students.filter(s =>
+    (s.profiles?.full_name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (s.student_id || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectedClassName = uniqueClasses.find(c => c.id === selectedClassId)?.name || "";
 
   return (
     <DashboardLayout role="teacher">
       <div className="space-y-6">
-        <h1 className="font-display text-2xl font-bold text-foreground">Attendance</h1>
+        <div>
+          <h1 className="font-display text-2xl font-bold text-foreground">Attendance Register</h1>
+          <p className="text-sm text-muted-foreground">Mark and track daily student attendance</p>
+        </div>
 
         <div className="flex flex-wrap gap-4 items-center">
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="border border-input rounded-lg px-3 py-2 bg-background text-foreground text-sm" />
+          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            className="border border-input rounded-lg px-3 py-2 bg-background text-foreground text-sm" />
           <div className="flex gap-2">
             {uniqueClasses.map((cls: any) => (
               <Button key={cls.id} variant={selectedClassId === cls.id ? "default" : "outline"} onClick={() => setSelectedClassId(cls.id)} size="sm">
@@ -117,29 +156,35 @@ const TeacherAttendance = () => {
 
         {selectedClassId && (
           <>
-            {/* Stats overview */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Card>
+            {/* Stats Overview */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <Card className="border-l-4 border-l-green-500">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-500/15"><Check className="w-5 h-5 text-green-700" /></div>
+                  <Check className="w-5 h-5 text-green-700" />
                   <div><p className="text-xl font-bold text-green-700">{presentCount}</p><p className="text-xs text-muted-foreground">Present</p></div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-l-4 border-l-red-500">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-red-500/15"><X className="w-5 h-5 text-red-700" /></div>
+                  <X className="w-5 h-5 text-red-700" />
                   <div><p className="text-xl font-bold text-red-700">{absentCount}</p><p className="text-xs text-muted-foreground">Absent</p></div>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-yellow-500">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-yellow-700" />
+                  <div><p className="text-xl font-bold text-yellow-700">{lateCount}</p><p className="text-xs text-muted-foreground">Late</p></div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-muted"><Users className="w-5 h-5 text-foreground" /></div>
+                  <Users className="w-5 h-5 text-foreground" />
                   <div><p className="text-xl font-bold">{students.length}</p><p className="text-xs text-muted-foreground">Total</p></div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/15"><TrendingUp className="w-5 h-5 text-primary" /></div>
+                  <TrendingUp className="w-5 h-5 text-primary" />
                   <div><p className="text-xl font-bold text-primary">{students.length > 0 ? Math.round((presentCount / students.length) * 100) : 0}%</p><p className="text-xs text-muted-foreground">Rate</p></div>
                 </CardContent>
               </Card>
@@ -157,6 +202,7 @@ const TeacherAttendance = () => {
                         <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 12 }} />
                         <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                        <Legend />
                         <Bar dataKey="present" fill="#10b981" stackId="a" name="Present" />
                         <Bar dataKey="absent" fill="#ef4444" stackId="a" name="Absent" />
                         <Bar dataKey="late" fill="#f59e0b" stackId="a" name="Late" />
@@ -171,8 +217,9 @@ const TeacherAttendance = () => {
                   <CardContent className="flex items-center justify-center">
                     <ResponsiveContainer width="100%" height={220}>
                       <PieChart>
-                        <Pie data={summaryStats} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                          {summaryStats.map((entry, i) => (
+                        <Pie data={summaryStats} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                          {summaryStats.map((_, i) => (
                             <Cell key={i} fill={["#10b981", "#ef4444", "#f59e0b", "#3b82f6"][i]} />
                           ))}
                         </Pie>
@@ -184,19 +231,23 @@ const TeacherAttendance = () => {
               )}
             </div>
 
-            {/* Attendance Marking */}
+            {/* Attendance Register */}
             {students.length > 0 && (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
                   <CardTitle className="flex items-center gap-2">
-                    <ClipboardCheck className="w-5 h-5" /> Mark Attendance — {date}
+                    <ClipboardCheck className="w-5 h-5" /> {selectedClassName} — Attendance Register — {date}
                   </CardTitle>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => markAll("present")} className="text-green-700 border-green-500 hover:bg-green-500/10">
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-44" />
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => markAll("present")} className="text-green-700">
                       <Check className="w-4 h-4 mr-1" /> All Present
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => markAll("absent")} className="text-red-700 border-red-500 hover:bg-red-500/10">
-                      <X className="w-4 h-4 mr-1" /> All Absent
+                    <Button size="sm" variant="outline" onClick={downloadRegister}>
+                      <Download className="w-4 h-4 mr-1" /> Export
                     </Button>
                     <Button size="sm" onClick={handleSave} disabled={saving}>
                       <Save className="w-4 h-4 mr-1" /> {saving ? "Saving..." : "Save"}
@@ -204,37 +255,77 @@ const TeacherAttendance = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {students.map((s, i) => {
-                      const status = attendance[s.user_id] || "present";
-                      const config = statusConfig[status];
-                      return (
-                        <div key={s.id} className={`flex items-center gap-3 p-3 rounded-lg border-l-4 ${config.border} ${config.bg} transition-all`}>
-                          <span className="w-8 text-sm text-muted-foreground font-mono">{i + 1}.</span>
-                          <span className="flex-1 font-medium text-foreground">{s.profiles?.full_name || "Student"}</span>
-                          <div className="flex gap-1">
-                            {(["present", "absent", "late", "excused"] as const).map(st => {
-                              const cfg = statusConfig[st];
-                              const Icon = cfg.icon;
-                              return (
-                                <button key={st} onClick={() => setAttendance(prev => ({ ...prev, [s.user_id]: st }))}
-                                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all flex items-center gap-1 ${
-                                    status === st ? `${cfg.bg} ${cfg.text} ${cfg.border}` : "bg-muted text-muted-foreground border-transparent hover:bg-muted/80"
-                                  }`}>
-                                  <Icon className="w-3 h-3" />
-                                  {st.charAt(0).toUpperCase() + st.slice(1)}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">#</TableHead>
+                        <TableHead>Student Name</TableHead>
+                        <TableHead>Student ID</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredStudents.map((s, i) => {
+                        const status = attendance[s.user_id] || "present";
+                        const config = statusConfig[status];
+                        return (
+                          <TableRow key={s.id} className={config.bg}>
+                            <TableCell className="text-muted-foreground font-mono">{i + 1}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${status === "present" ? "bg-green-500" : status === "absent" ? "bg-red-500" : status === "late" ? "bg-yellow-500" : "bg-blue-500"}`} />
+                                <span className="font-medium">{s.profiles?.full_name || "Student"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono text-xs">{s.student_id || "—"}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1 justify-center">
+                                {(["present", "absent", "late", "excused"] as const).map(st => {
+                                  const cfg = statusConfig[st];
+                                  return (
+                                    <button key={st} onClick={() => setAttendance(prev => ({ ...prev, [s.user_id]: st }))}
+                                      className={`w-9 h-9 rounded-lg text-xs font-bold border-2 transition-all flex items-center justify-center ${
+                                        status === st ? `${cfg.bg} ${cfg.text} ${cfg.border}` : "bg-muted text-muted-foreground border-transparent hover:bg-muted/80"
+                                      }`}
+                                      title={st.charAt(0).toUpperCase() + st.slice(1)}>
+                                      {cfg.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {filteredStudents.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">No students found</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+
+                  {/* Legend */}
+                  <div className="flex gap-4 mt-4 pt-3 border-t border-border text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-green-500" /> P = Present</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-500" /> A = Absent</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-yellow-500" /> L = Late</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-500" /> E = Excused</span>
                   </div>
                 </CardContent>
               </Card>
             )}
           </>
+        )}
+
+        {!selectedClassId && (
+          <Card>
+            <CardContent className="py-10 text-center text-muted-foreground">
+              Select a class above to mark attendance.
+            </CardContent>
+          </Card>
         )}
       </div>
     </DashboardLayout>
