@@ -196,7 +196,7 @@ const AdminFees = () => {
 
   const activeScholarships = scholarships.filter(s => s.is_active);
 
-
+  return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
