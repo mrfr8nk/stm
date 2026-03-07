@@ -266,6 +266,7 @@ const MessagesPage = () => {
   };
 
   const getName = (uid: string) => profiles.find(p => p.user_id === uid)?.full_name || "User";
+  const getAvatar = (uid: string) => profiles.find(p => p.user_id === uid)?.avatar_url || null;
 
   const getConvName = (conv: any) => {
     if (conv.title) return conv.title;
@@ -312,9 +313,13 @@ const MessagesPage = () => {
                 >
                   <div className="flex items-center gap-2">
                     <div className="relative">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-                        {getConvName(conv).charAt(0)}
-                      </div>
+                      {otherId && getAvatar(otherId) ? (
+                        <img src={getAvatar(otherId)!} alt="" className="w-8 h-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                          {getConvName(conv).charAt(0)}
+                        </div>
+                      )}
                       {isOnline && (
                         <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-background" />
                       )}
@@ -340,9 +345,13 @@ const MessagesPage = () => {
             <CardHeader className="p-3 border-b border-border">
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-                    {getConvName(selectedConv).charAt(0)}
-                  </div>
+                  {getOtherUserId(selectedConv) && getAvatar(getOtherUserId(selectedConv)) ? (
+                    <img src={getAvatar(getOtherUserId(selectedConv))!} alt="" className="w-8 h-8 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                      {getConvName(selectedConv).charAt(0)}
+                    </div>
+                  )}
                   {getOtherUserId(selectedConv) && onlineUsers.has(getOtherUserId(selectedConv)) && (
                     <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-background" />
                   )}
@@ -363,6 +372,7 @@ const MessagesPage = () => {
                     msg={msg}
                     isMine={msg.sender_id === user?.id}
                     senderName={getName(msg.sender_id)}
+                    senderAvatar={getAvatar(msg.sender_id)}
                     isRead={!!readStatus[msg.id]}
                     onEdit={editMessage}
                     onDelete={deleteMessage}

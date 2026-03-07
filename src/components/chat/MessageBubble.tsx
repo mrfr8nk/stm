@@ -9,12 +9,13 @@ interface MessageBubbleProps {
   msg: any;
   isMine: boolean;
   senderName: string;
+  senderAvatar?: string | null;
   isRead: boolean;
   onEdit: (id: string, content: string) => void;
   onDelete: (id: string, forEveryone: boolean) => void;
 }
 
-const MessageBubble = ({ msg, isMine, senderName, isRead, onEdit, onDelete }: MessageBubbleProps) => {
+const MessageBubble = ({ msg, isMine, senderName, senderAvatar, isRead, onEdit, onDelete }: MessageBubbleProps) => {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(msg.content);
   const [deleteDialog, setDeleteDialog] = useState(false);
@@ -48,7 +49,16 @@ const MessageBubble = ({ msg, isMine, senderName, isRead, onEdit, onDelete }: Me
 
   return (
     <>
-      <div className={`flex ${isMine ? "justify-end" : "justify-start"} group`}>
+      <div className={`flex ${isMine ? "justify-end" : "justify-start"} group gap-2`}>
+        {!isMine && (
+          senderAvatar ? (
+            <img src={senderAvatar} alt={senderName} className="w-7 h-7 rounded-full object-cover shrink-0 mt-1" />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-1">
+              {senderName.charAt(0)}
+            </div>
+          )
+        )}
         <div className={`max-w-[70%] rounded-2xl px-4 py-2 relative ${isMine ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
           {!isMine && <p className="text-xs font-medium mb-1 opacity-70">{senderName}</p>}
 
