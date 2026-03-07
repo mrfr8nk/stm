@@ -5,9 +5,8 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, FileDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { exportCSV } from "@/lib/csv-export";
+import { BookOpen } from "lucide-react";
+import ExportDropdown from "@/components/ExportDropdown";
 
 const StudentGrades = () => {
   const { user } = useAuth();
@@ -49,14 +48,13 @@ const StudentGrades = () => {
                 <option value="term_2">Term 2</option>
                 <option value="term_3">Term 3</option>
               </select>
-              <Button variant="outline" size="sm" onClick={() => {
-                exportCSV(`my_grades_${term}`,
-                  ["Subject", "Code", "Mark", "Grade", "Comment"],
-                  grades.map(g => [g.subjects?.name || "", g.subjects?.code || "", `${g.mark}%`, g.grade_letter || "", g.comment || ""])
-                );
-              }} disabled={grades.length === 0}>
-                <FileDown className="w-4 h-4 mr-1" /> Download
-              </Button>
+              <ExportDropdown
+                title={`My Grades — ${term.replace("_", " ").toUpperCase()}`}
+                filename={`my_grades_${term}`}
+                headers={["Subject", "Code", "Mark", "Grade", "Comment"]}
+                rows={grades.map(g => [g.subjects?.name || "", g.subjects?.code || "", `${g.mark}%`, g.grade_letter || "", g.comment || ""])}
+                disabled={grades.length === 0}
+              />
             </div>
 
             <Card>

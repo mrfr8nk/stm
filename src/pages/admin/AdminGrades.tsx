@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Search, TrendingUp, TrendingDown, Users, Trash2, RotateCcw, Edit, Plus, FileDown } from "lucide-react";
+import { BarChart3, Search, TrendingUp, TrendingDown, Users, Trash2, RotateCcw, Edit, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { exportCSV } from "@/lib/csv-export";
+import ExportDropdown from "@/components/ExportDropdown";
 
 const AdminGrades = () => {
   const { toast } = useToast();
@@ -188,15 +188,13 @@ const AdminGrades = () => {
                   <option value="">All Subjects</option>
                   {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
-                <Button variant="outline" size="sm" onClick={() => {
-                  const count = exportCSV("grades_report",
-                    ["Student", "Subject", "Class", "Year", "Term", "Mark", "Grade", "Teacher", "Comment"],
-                    filtered.map(g => [getName(g.student_id), getSubjectName(g.subject_id), getClassName(g.class_id), g.academic_year, g.term.replace("_", " "), g.mark, g.grade_letter || "", getName(g.teacher_id), g.comment || ""])
-                  );
-                  toast({ title: "Exported", description: `${count} grade records exported.` });
-                }} disabled={filtered.length === 0}>
-                  <FileDown className="w-4 h-4 mr-1" /> Export CSV
-                </Button>
+                <ExportDropdown
+                  title="Grades Report"
+                  filename="grades_report"
+                  headers={["Student", "Subject", "Class", "Year", "Term", "Mark", "Grade", "Teacher", "Comment"]}
+                  rows={filtered.map(g => [getName(g.student_id), getSubjectName(g.subject_id), getClassName(g.class_id), g.academic_year, g.term.replace("_", " "), g.mark, g.grade_letter || "", getName(g.teacher_id), g.comment || ""])}
+                  disabled={filtered.length === 0}
+                />
               </CardContent>
             </Card>
 

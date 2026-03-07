@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, Plus, Trash2, Edit, RotateCcw, Search, Info, AlertTriangle, FileDown } from "lucide-react";
-import { exportCSV } from "@/lib/csv-export";
+import { GraduationCap, Plus, Trash2, Edit, RotateCcw, Search, Info, AlertTriangle } from "lucide-react";
+import ExportDropdown from "@/components/ExportDropdown";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -275,15 +275,13 @@ const AdminClasses = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input placeholder="Search classes..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
               </div>
-              <Button variant="outline" size="sm" onClick={() => {
-                const count = exportCSV("class_list", 
-                  ["Name", "Form", "Level", "Stream", "Class Teacher", "Year"],
-                  filteredClasses.map(c => [c.name, `Form ${c.form}`, c.level.replace("_", " ").toUpperCase(), c.stream || "", c.class_teacher_id ? getTeacherName(c.class_teacher_id) : "", c.academic_year])
-                );
-                toast({ title: "Exported", description: `${count} classes exported to CSV.` });
-              }} disabled={filteredClasses.length === 0}>
-                <FileDown className="w-4 h-4 mr-1" /> Export CSV
-              </Button>
+              <ExportDropdown
+                title="Class List"
+                filename="class_list"
+                headers={["Name", "Form", "Level", "Stream", "Class Teacher", "Year"]}
+                rows={filteredClasses.map(c => [c.name, `Form ${c.form}`, c.level.replace("_", " ").toUpperCase(), c.stream || "", c.class_teacher_id ? getTeacherName(c.class_teacher_id) : "", c.academic_year])}
+                disabled={filteredClasses.length === 0}
+              />
             </div>
             <Card>
               <CardContent className="p-0">

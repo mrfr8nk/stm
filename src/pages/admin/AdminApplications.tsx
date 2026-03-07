@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, CheckCircle, XCircle, Clock, Eye, Loader2, FileDown } from "lucide-react";
+import { FileText, Search, CheckCircle, XCircle, Clock, Eye, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { exportCSV } from "@/lib/csv-export";
+import ExportDropdown from "@/components/ExportDropdown";
 
 const AdminApplications = () => {
   const { user } = useAuth();
@@ -220,15 +220,13 @@ const AdminApplications = () => {
             <h1 className="font-display text-2xl font-bold text-foreground">Applications</h1>
             <p className="text-muted-foreground text-sm">Review student enrollment applications & access requests</p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => {
-            const count = exportCSV("applications",
-              ["Name", "Email", "Phone", "Level", "Form", "Guardian", "Guardian Phone", "Previous School", "Status", "Date"],
-              applications.map(a => [a.full_name, a.email, a.phone || "", a.level, `Form ${a.form}`, a.guardian_name || "", a.guardian_phone || "", a.previous_school || "", a.status, new Date(a.created_at).toLocaleDateString()])
-            );
-            toast({ title: "Exported", description: `${count} applications exported.` });
-          }} disabled={applications.length === 0}>
-            <FileDown className="w-4 h-4 mr-1" /> Export CSV
-          </Button>
+          <ExportDropdown
+            title="Student Applications"
+            filename="applications"
+            headers={["Name", "Email", "Phone", "Level", "Form", "Guardian", "Guardian Phone", "Previous School", "Status", "Date"]}
+            rows={applications.map(a => [a.full_name, a.email, a.phone || "", a.level, `Form ${a.form}`, a.guardian_name || "", a.guardian_phone || "", a.previous_school || "", a.status, new Date(a.created_at).toLocaleDateString()])}
+            disabled={applications.length === 0}
+          />
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

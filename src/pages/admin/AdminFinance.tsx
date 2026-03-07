@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { DollarSign, ShoppingCart, Plus, Trash2, Clock, TrendingDown, TrendingUp, Receipt, ZoomIn, Image, FileDown } from "lucide-react";
+import { DollarSign, ShoppingCart, Plus, Trash2, Clock, TrendingDown, TrendingUp, Receipt, ZoomIn, Image } from "lucide-react";
 import ReceiptImageUpload from "@/components/ReceiptImageUpload";
-import { exportCSV } from "@/lib/csv-export";
+import ExportDropdown from "@/components/ExportDropdown";
 
 const PETTY_CASH_CATEGORIES = [
   "Stationery", "Cleaning Supplies", "Maintenance", "Transport", "Food & Beverages",
@@ -102,24 +102,20 @@ const AdminFinance = () => {
             <p className="text-muted-foreground text-sm">Payment logs, petty cash & expense tracking</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => {
-              const count = exportCSV("fee_payments",
-                ["Student", "Amount Paid", "Amount Due", "Method", "Receipt #", "Date"],
-                recentPayments.map(p => [getName(p.student_id), p.amount_paid, p.amount_due, p.payment_method || "", p.receipt_number || "", p.payment_date || ""])
-              );
-              toast({ title: "Exported", description: `${count} payments exported.` });
-            }} disabled={recentPayments.length === 0}>
-              <FileDown className="w-4 h-4 mr-1" /> Export Payments
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => {
-              const count = exportCSV("petty_cash",
-                ["Date", "Description", "Category", "Amount", "Method", "Receipt Ref", "Recorded By", "Notes"],
-                pettyCash.map(p => [p.date, p.description, p.category, p.amount, p.payment_method || "", p.receipt_reference || "", getName(p.recorded_by), p.notes || ""])
-              );
-              toast({ title: "Exported", description: `${count} petty cash entries exported.` });
-            }} disabled={pettyCash.length === 0}>
-              <FileDown className="w-4 h-4 mr-1" /> Export Petty Cash
-            </Button>
+            <ExportDropdown
+              title="Fee Payments Report"
+              filename="fee_payments"
+              headers={["Student", "Amount Paid", "Amount Due", "Method", "Receipt #", "Date"]}
+              rows={recentPayments.map(p => [getName(p.student_id), p.amount_paid, p.amount_due, p.payment_method || "", p.receipt_number || "", p.payment_date || ""])}
+              disabled={recentPayments.length === 0}
+            />
+            <ExportDropdown
+              title="Petty Cash Report"
+              filename="petty_cash"
+              headers={["Date", "Description", "Category", "Amount", "Method", "Receipt Ref", "Recorded By", "Notes"]}
+              rows={pettyCash.map(p => [p.date, p.description, p.category, p.amount, p.payment_method || "", p.receipt_reference || "", getName(p.recorded_by), p.notes || ""])}
+              disabled={pettyCash.length === 0}
+            />
           </div>
         </div>
 
