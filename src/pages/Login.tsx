@@ -8,11 +8,12 @@ import { useToast } from "@/hooks/use-toast";
 import { GraduationCap, LogIn, Shield, BookOpen, Users } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
 
-type PortalType = "student" | "teacher" | "admin";
+type PortalType = "student" | "teacher" | "admin" | "parent";
 
 const portalConfig: Record<PortalType, { label: string; icon: React.ElementType; description: string; color: string; bgColor: string }> = {
   student: { label: "Student", icon: GraduationCap, description: "View grades, attendance & reports", color: "text-accent", bgColor: "bg-accent/10 border-accent/30" },
   teacher: { label: "Teacher", icon: BookOpen, description: "Manage classes, grades & attendance", color: "text-secondary", bgColor: "bg-secondary/10 border-secondary/30" },
+  parent: { label: "Parent", icon: Users, description: "Monitor your child's academic progress", color: "text-amber-600", bgColor: "bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800/30" },
   admin: { label: "Administrator", icon: Shield, description: "Full system management access", color: "text-primary", bgColor: "bg-primary/10 border-primary/30" },
 };
 
@@ -137,7 +138,7 @@ const Login = () => {
         {/* Portal Selection */}
         {!selectedPortal ? (
           <div className="space-y-4">
-            {(["student", "teacher", "admin"] as PortalType[]).map((portal) => {
+            {(["student", "teacher", "parent", "admin"] as PortalType[]).map((portal) => {
               const config = portalConfig[portal];
               return (
                 <Card
