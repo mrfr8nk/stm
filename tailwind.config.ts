@@ -59,6 +59,7 @@ export default {
           sky: "hsl(var(--school-sky))",
           "sky-dark": "hsl(var(--school-sky-dark))",
         },
+        success: "hsl(var(--success))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
