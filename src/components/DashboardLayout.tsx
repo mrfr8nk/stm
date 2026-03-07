@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   Menu, X, LogOut, Home, Users, BookOpen, ClipboardCheck,
   FileText, Bell, Settings, BarChart3, Key, GraduationCap,
@@ -129,13 +130,18 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
           </button>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-foreground">{profile?.full_name || "User"}</p>
               <p className="text-xs text-muted-foreground">{roleLabel}</p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
-              {(profile?.full_name || "U").charAt(0)}
-            </div>
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt={profile.full_name} className="w-9 h-9 rounded-full object-cover border-2 border-border" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+                {(profile?.full_name || "U").charAt(0)}
+              </div>
+            )}
           </div>
         </header>
 

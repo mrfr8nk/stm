@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ThemeProvider } from "next-themes";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 // Public pages
@@ -55,64 +56,66 @@ import AdminApplications from "./pages/admin/AdminApplications";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public */}
-            <Route path="/" element={<Index />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/admissions" element={<Admissions />} />
-            <Route path="/staff" element={<Staff />} />
-            <Route path="/gallery" element={<Gallery />} />
-            <Route path="/news" element={<News />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public */}
+              <Route path="/" element={<Index />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/admissions" element={<Admissions />} />
+              <Route path="/staff" element={<Staff />} />
+              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/news" element={<News />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Teacher Portal */}
-            <Route path="/teacher" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherDashboard /></ProtectedRoute>} />
-            <Route path="/teacher/classes" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherClasses /></ProtectedRoute>} />
-            <Route path="/teacher/grades" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherGrades /></ProtectedRoute>} />
-            <Route path="/teacher/attendance" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherAttendance /></ProtectedRoute>} />
-            <Route path="/teacher/reports" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherReports /></ProtectedRoute>} />
-            <Route path="/teacher/monthly-tests" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherMonthlyTests /></ProtectedRoute>} />
-            <Route path="/teacher/announcements" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherAnnouncements /></ProtectedRoute>} />
-            <Route path="/teacher/profile" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherProfile /></ProtectedRoute>} />
+              {/* Teacher Portal */}
+              <Route path="/teacher" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherDashboard /></ProtectedRoute>} />
+              <Route path="/teacher/classes" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherClasses /></ProtectedRoute>} />
+              <Route path="/teacher/grades" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherGrades /></ProtectedRoute>} />
+              <Route path="/teacher/attendance" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherAttendance /></ProtectedRoute>} />
+              <Route path="/teacher/reports" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherReports /></ProtectedRoute>} />
+              <Route path="/teacher/monthly-tests" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherMonthlyTests /></ProtectedRoute>} />
+              <Route path="/teacher/announcements" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherAnnouncements /></ProtectedRoute>} />
+              <Route path="/teacher/profile" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherProfile /></ProtectedRoute>} />
 
-            {/* Student Portal */}
-            <Route path="/student" element={<ProtectedRoute allowedRoles={["student"]}><StudentDashboard /></ProtectedRoute>} />
-            <Route path="/student/grades" element={<ProtectedRoute allowedRoles={["student"]}><StudentGrades /></ProtectedRoute>} />
-            <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={["student"]}><StudentAttendance /></ProtectedRoute>} />
-            <Route path="/student/reports" element={<ProtectedRoute allowedRoles={["student"]}><StudentReports /></ProtectedRoute>} />
-            <Route path="/student/announcements" element={<ProtectedRoute allowedRoles={["student"]}><StudentAnnouncements /></ProtectedRoute>} />
-            <Route path="/student/fees" element={<ProtectedRoute allowedRoles={["student"]}><StudentFees /></ProtectedRoute>} />
-            <Route path="/student/profile" element={<ProtectedRoute allowedRoles={["student"]}><StudentProfile /></ProtectedRoute>} />
-            <Route path="/student/study-pal" element={<ProtectedRoute allowedRoles={["student"]}><StudentStudyPal /></ProtectedRoute>} />
+              {/* Student Portal */}
+              <Route path="/student" element={<ProtectedRoute allowedRoles={["student"]}><StudentDashboard /></ProtectedRoute>} />
+              <Route path="/student/grades" element={<ProtectedRoute allowedRoles={["student"]}><StudentGrades /></ProtectedRoute>} />
+              <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={["student"]}><StudentAttendance /></ProtectedRoute>} />
+              <Route path="/student/reports" element={<ProtectedRoute allowedRoles={["student"]}><StudentReports /></ProtectedRoute>} />
+              <Route path="/student/announcements" element={<ProtectedRoute allowedRoles={["student"]}><StudentAnnouncements /></ProtectedRoute>} />
+              <Route path="/student/fees" element={<ProtectedRoute allowedRoles={["student"]}><StudentFees /></ProtectedRoute>} />
+              <Route path="/student/profile" element={<ProtectedRoute allowedRoles={["student"]}><StudentProfile /></ProtectedRoute>} />
+              <Route path="/student/study-pal" element={<ProtectedRoute allowedRoles={["student"]}><StudentStudyPal /></ProtectedRoute>} />
 
-            {/* Admin Portal */}
-            <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["admin"]}><AdminUsers /></ProtectedRoute>} />
-            <Route path="/admin/applications" element={<ProtectedRoute allowedRoles={["admin"]}><AdminApplications /></ProtectedRoute>} />
-            <Route path="/admin/classes" element={<ProtectedRoute allowedRoles={["admin"]}><AdminClasses /></ProtectedRoute>} />
-            <Route path="/admin/subjects" element={<ProtectedRoute allowedRoles={["admin"]}><AdminSubjects /></ProtectedRoute>} />
-            <Route path="/admin/codes" element={<ProtectedRoute allowedRoles={["admin"]}><AdminCodes /></ProtectedRoute>} />
-            <Route path="/admin/grades" element={<ProtectedRoute allowedRoles={["admin"]}><AdminGrades /></ProtectedRoute>} />
-            <Route path="/admin/announcements" element={<ProtectedRoute allowedRoles={["admin"]}><AdminAnnouncements /></ProtectedRoute>} />
-            <Route path="/admin/fees" element={<ProtectedRoute allowedRoles={["admin"]}><AdminFees /></ProtectedRoute>} />
-            <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={["admin"]}><AdminSettings /></ProtectedRoute>} />
+              {/* Admin Portal */}
+              <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["admin"]}><AdminUsers /></ProtectedRoute>} />
+              <Route path="/admin/applications" element={<ProtectedRoute allowedRoles={["admin"]}><AdminApplications /></ProtectedRoute>} />
+              <Route path="/admin/classes" element={<ProtectedRoute allowedRoles={["admin"]}><AdminClasses /></ProtectedRoute>} />
+              <Route path="/admin/subjects" element={<ProtectedRoute allowedRoles={["admin"]}><AdminSubjects /></ProtectedRoute>} />
+              <Route path="/admin/codes" element={<ProtectedRoute allowedRoles={["admin"]}><AdminCodes /></ProtectedRoute>} />
+              <Route path="/admin/grades" element={<ProtectedRoute allowedRoles={["admin"]}><AdminGrades /></ProtectedRoute>} />
+              <Route path="/admin/announcements" element={<ProtectedRoute allowedRoles={["admin"]}><AdminAnnouncements /></ProtectedRoute>} />
+              <Route path="/admin/fees" element={<ProtectedRoute allowedRoles={["admin"]}><AdminFees /></ProtectedRoute>} />
+              <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={["admin"]}><AdminSettings /></ProtectedRoute>} />
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

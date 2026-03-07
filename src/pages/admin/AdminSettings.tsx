@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -7,9 +7,12 @@ import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, CheckCircle, Edit, User, Save, Shield, Lock, Unlock, FileText } from "lucide-react";
+import { Calendar, CheckCircle, Edit, User, Save, Shield, Lock, Unlock, Download, Upload, AlertTriangle, Database } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
+import AvatarUpload from "@/components/AvatarUpload";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const AdminSettings = () => {
   const { user, profile } = useAuth();
@@ -19,14 +22,23 @@ const AdminSettings = () => {
   const [editSession, setEditSession] = useState<any>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [reportsLocked, setReportsLocked] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
 
   // Profile editing
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Backup/Restore
+  const [backingUp, setBackingUp] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [restoreProgress, setRestoreProgress] = useState(0);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [pendingBackupData, setPendingBackupData] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    if (profile) setFullName(profile.full_name || "");
+    if (profile) { setFullName(profile.full_name || ""); setAvatarUrl(profile.avatar_url || null); }
   }, [profile]);
 
   useEffect(() => {
@@ -36,7 +48,6 @@ const AdminSettings = () => {
     }
   }, [user]);
 
-  // Fetch system settings
   useEffect(() => {
     supabase.from("system_settings").select("*").eq("key", "reports_locked").single()
       .then(({ data }) => { if (data) setReportsLocked(data.value === "true"); });
@@ -54,10 +65,7 @@ const AdminSettings = () => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       setReportsLocked(newValue);
-      toast({ title: newValue ? "Reports Locked" : "Reports Unlocked", description: newValue ? "Students cannot view report cards." : "Students can now view their report cards (if fees are cleared)." });
-      if (user) {
-        await supabase.from("activity_log").insert({ user_id: user.id, action: newValue ? "Locked student reports" : "Unlocked student reports", entity_type: "system_settings" });
-      }
+      toast({ title: newValue ? "Reports Locked" : "Reports Unlocked" });
     }
   };
 
@@ -95,6 +103,84 @@ const AdminSettings = () => {
     setSaving(false);
   };
 
+  // Backup
+  const handleBackup = async () => {
+    setBackingUp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/backup-restore`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ action: "backup" }),
+      });
+      if (!resp.ok) throw new Error((await resp.json()).error || "Backup failed");
+      const backupData = await resp.json();
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `stmarys-backup-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Backup Complete", description: `${Object.values(backupData.row_counts).reduce((a: number, b: any) => a + Number(b), 0)} rows exported.` });
+    } catch (e: any) {
+      toast({ title: "Backup Error", description: e.message, variant: "destructive" });
+    }
+    setBackingUp(false);
+  };
+
+  // Restore
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        if (!data.tables) throw new Error("Invalid backup format");
+        setPendingBackupData(data);
+        setRestoreConfirmOpen(true);
+      } catch {
+        toast({ title: "Invalid File", description: "Could not parse backup file.", variant: "destructive" });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const handleRestore = async () => {
+    if (!pendingBackupData) return;
+    setRestoreConfirmOpen(false);
+    setRestoring(true);
+    setRestoreProgress(10);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      setRestoreProgress(30);
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/backup-restore`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ action: "restore", backup_data: pendingBackupData }),
+      });
+      setRestoreProgress(80);
+      if (!resp.ok) throw new Error((await resp.json()).error || "Restore failed");
+      const result = await resp.json();
+      setRestoreProgress(100);
+      const totalRestored = Object.values(result.results).reduce((sum: number, r: any) => sum + (r.count || 0), 0);
+      toast({ title: "Restore Complete", description: `${totalRestored} rows restored.` });
+    } catch (e: any) {
+      toast({ title: "Restore Error", description: e.message, variant: "destructive" });
+    }
+    setRestoring(false);
+    setRestoreProgress(0);
+    setPendingBackupData(null);
+  };
+
   const termLabel = (t: string) => t.replace("_", " ").toUpperCase();
 
   const getAutoTerm = () => {
@@ -115,9 +201,9 @@ const AdminSettings = () => {
           <CardHeader><CardTitle className="flex items-center gap-2"><User className="w-5 h-5" /> Personal Information</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-bold">
-                {(profile?.full_name || "A").charAt(0)}
-              </div>
+              {user && (
+                <AvatarUpload userId={user.id} currentUrl={avatarUrl} name={profile?.full_name || "A"} size="md" onUploaded={setAvatarUrl} />
+              )}
               <div>
                 <p className="font-bold text-foreground">{profile?.full_name || "Admin"}</p>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
@@ -133,6 +219,17 @@ const AdminSettings = () => {
           </CardContent>
         </Card>
 
+        {/* Theme */}
+        <Card>
+          <CardContent className="p-6 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-foreground">Appearance</p>
+              <p className="text-sm text-muted-foreground">Toggle between light and dark mode</p>
+            </div>
+            <ThemeToggle />
+          </CardContent>
+        </Card>
+
         {/* Reports Lock Toggle */}
         <Card className={`border-l-4 ${reportsLocked ? "border-l-red-500" : "border-l-green-500"}`}>
           <CardContent className="p-6">
@@ -145,12 +242,37 @@ const AdminSettings = () => {
                   <p className="font-bold text-foreground">Student Report Cards</p>
                   <p className="text-sm text-muted-foreground">
                     {reportsLocked
-                      ? "Reports are LOCKED — Students cannot view report cards. Unlock when teachers have finished entering grades."
+                      ? "Reports are LOCKED — Students cannot view report cards."
                       : "Reports are UNLOCKED — Students can view their report cards (if fees are cleared)."}
                   </p>
                 </div>
               </div>
               <Switch checked={!reportsLocked} onCheckedChange={toggleReportsLock} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Backup & Restore */}
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Database className="w-5 h-5" /> Backup & Restore</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Create a full backup of all school data or restore from a previous backup file. Backups include all students, teachers, grades, attendance, fees, and system settings.
+            </p>
+            {restoring && (
+              <div className="space-y-2">
+                <Progress value={restoreProgress} className="h-2" />
+                <p className="text-sm text-muted-foreground">Restoring data... {restoreProgress}%</p>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={handleBackup} disabled={backingUp || restoring} variant="default">
+                <Download className="w-4 h-4 mr-2" /> {backingUp ? "Creating Backup..." : "Download Backup"}
+              </Button>
+              <Button onClick={() => fileInputRef.current?.click()} disabled={backingUp || restoring} variant="outline">
+                <Upload className="w-4 h-4 mr-2" /> Restore from Backup
+              </Button>
+              <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileSelect} />
             </div>
           </CardContent>
         </Card>
@@ -187,7 +309,7 @@ const AdminSettings = () => {
                     <TableCell>{s.start_date}</TableCell>
                     <TableCell>{s.end_date}</TableCell>
                     <TableCell>
-                      {s.is_current ? <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Current</span> : <span className="text-xs text-muted-foreground">—</span>}
+                      {s.is_current ? <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">Current</span> : <span className="text-xs text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -202,6 +324,7 @@ const AdminSettings = () => {
           </CardContent>
         </Card>
 
+        {/* Edit Session Dialog */}
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Edit Session Dates</DialogTitle></DialogHeader>
@@ -213,6 +336,31 @@ const AdminSettings = () => {
                 <Button className="w-full" onClick={handleEditSession}>Save Changes</Button>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Restore Confirm Dialog */}
+        <Dialog open={restoreConfirmOpen} onOpenChange={setRestoreConfirmOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle className="flex items-center gap-2 text-destructive"><AlertTriangle className="w-5 h-5" /> Confirm Restore</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                <strong>Warning:</strong> Restoring will replace ALL existing data with the backup data. This action cannot be undone.
+              </p>
+              {pendingBackupData && (
+                <div className="bg-muted rounded-lg p-3 text-sm space-y-1">
+                  <p><strong>Backup Date:</strong> {new Date(pendingBackupData.created_at).toLocaleString()}</p>
+                  <p><strong>Created By:</strong> {pendingBackupData.created_by}</p>
+                  <p><strong>Total Rows:</strong> {String(Object.values(pendingBackupData.row_counts || {}).reduce((a: number, b: any) => a + Number(b), 0))}</p>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1" onClick={() => setRestoreConfirmOpen(false)}>Cancel</Button>
+                <Button variant="destructive" className="flex-1" onClick={handleRestore}>
+                  <Upload className="w-4 h-4 mr-2" /> Restore Now
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
