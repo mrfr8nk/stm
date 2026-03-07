@@ -1,20 +1,23 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, GraduationCap, BookOpen, Key, Bell, DollarSign, FileText, Calendar, TrendingUp } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
+import { Users, GraduationCap, BookOpen, Key, Bell, FileText, Calendar, TrendingUp, Clock, Mail, Shield } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "#f59e0b", "#10b981", "#8b5cf6"];
 
 const AdminDashboard = () => {
+  const { user, profile } = useAuth();
   const [stats, setStats] = useState({ users: 0, teachers: 0, students: 0, classes: 0, subjects: 0, codes: 0, pendingApps: 0, announcements: 0 });
   const [currentSession, setCurrentSession] = useState<any>(null);
   const [recentAnnouncements, setRecentAnnouncements] = useState<any[]>([]);
   const [enrollmentByYear, setEnrollmentByYear] = useState<any[]>([]);
   const [levelDistribution, setLevelDistribution] = useState<any[]>([]);
   const [formDistribution, setFormDistribution] = useState<any[]>([]);
+  const [activityLog, setActivityLog] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -40,7 +43,6 @@ const AdminDashboard = () => {
       // Enrollment analytics
       const { data: studentProfiles } = await supabase.from("student_profiles").select("enrollment_date, level, form, is_active");
       if (studentProfiles) {
-        // Year-by-year enrollment
         const yearMap: Record<number, number> = {};
         const currentYear = new Date().getFullYear();
         for (let y = currentYear - 5; y <= currentYear; y++) yearMap[y] = 0;
@@ -50,7 +52,6 @@ const AdminDashboard = () => {
         });
         setEnrollmentByYear(Object.entries(yearMap).map(([year, count]) => ({ year, count })));
 
-        // Level distribution
         const levelMap: Record<string, number> = { zjc: 0, o_level: 0, a_level: 0 };
         const formMap: Record<number, number> = {};
         studentProfiles.filter(s => s.is_active).forEach(s => {
@@ -64,9 +65,16 @@ const AdminDashboard = () => {
         ].filter(d => d.value > 0));
         setFormDistribution(Object.entries(formMap).sort(([a], [b]) => Number(a) - Number(b)).map(([form, count]) => ({ form: `Form ${form}`, count })));
       }
+
+      // Activity log - fetch all recent activity across users
+      if (user) {
+        const { data: activities } = await supabase.from("activity_log").select("*")
+          .order("created_at", { ascending: false }).limit(15);
+        setActivityLog(activities || []);
+      }
     };
     fetchAll();
-  }, []);
+  }, [user]);
 
   const cards = [
     { label: "Total Users", value: stats.users, icon: Users, color: "text-primary", link: "/admin/users" },
@@ -81,6 +89,15 @@ const AdminDashboard = () => {
 
   const termLabel = (t: string) => t?.replace("_", " ").toUpperCase() || "";
 
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
@@ -89,17 +106,34 @@ const AdminDashboard = () => {
             <h1 className="font-display text-2xl font-bold text-foreground">Admin Dashboard</h1>
             <p className="text-muted-foreground">School management overview</p>
           </div>
-          {currentSession && (
+          <div className="flex items-center gap-3">
+            {/* Logged-in admin info */}
             <Card>
               <CardContent className="flex items-center gap-3 p-3">
-                <Calendar className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-sm font-bold">{currentSession.academic_year} — {termLabel(currentSession.term)}</p>
-                  <p className="text-xs text-muted-foreground">{currentSession.start_date} to {currentSession.end_date}</p>
+                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+                  {(profile?.full_name || "A").charAt(0)}
                 </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">{profile?.full_name || "Admin"}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Mail className="w-3 h-3" /> {profile?.email || user?.email || "—"}
+                  </p>
+                </div>
+                <Shield className="w-4 h-4 text-primary ml-1" />
               </CardContent>
             </Card>
-          )}
+            {currentSession && (
+              <Card>
+                <CardContent className="flex items-center gap-3 p-3">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-bold">{currentSession.academic_year} — {termLabel(currentSession.term)}</p>
+                    <p className="text-xs text-muted-foreground">{currentSession.start_date} to {currentSession.end_date}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -192,6 +226,36 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Activity Log */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Clock className="w-5 h-5" /> System Activity Log
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activityLog.length > 0 ? (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {activityLog.map(a => (
+                  <div key={a.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/40 border-l-4 border-l-primary">
+                    <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">{a.action}</p>
+                      {a.details && <p className="text-xs text-muted-foreground truncate">{a.details}</p>}
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-muted-foreground">{timeAgo(a.created_at)}</p>
+                        {a.entity_type && <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{a.entity_type}</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm py-6 text-center">No activity recorded yet. Actions like grading, attendance marking, and announcements will appear here.</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
