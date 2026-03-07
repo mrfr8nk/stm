@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const AdminUsers = () => {
+  const [linkSearchQuery, setLinkSearchQuery] = useState("");
   const { toast } = useToast();
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState("");
