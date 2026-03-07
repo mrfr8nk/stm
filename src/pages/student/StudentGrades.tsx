@@ -5,7 +5,9 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen } from "lucide-react";
+import { BookOpen, FileDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { exportCSV } from "@/lib/csv-export";
 
 const StudentGrades = () => {
   const { user } = useAuth();
@@ -41,11 +43,21 @@ const StudentGrades = () => {
           </TabsList>
 
           <TabsContent value="grades" className="space-y-4">
-            <select className="border border-input rounded-lg px-3 py-2 bg-background text-foreground text-sm" value={term} onChange={e => setTerm(e.target.value)}>
-              <option value="term_1">Term 1</option>
-              <option value="term_2">Term 2</option>
-              <option value="term_3">Term 3</option>
-            </select>
+            <div className="flex items-center gap-3">
+              <select className="border border-input rounded-lg px-3 py-2 bg-background text-foreground text-sm" value={term} onChange={e => setTerm(e.target.value)}>
+                <option value="term_1">Term 1</option>
+                <option value="term_2">Term 2</option>
+                <option value="term_3">Term 3</option>
+              </select>
+              <Button variant="outline" size="sm" onClick={() => {
+                exportCSV(`my_grades_${term}`,
+                  ["Subject", "Code", "Mark", "Grade", "Comment"],
+                  grades.map(g => [g.subjects?.name || "", g.subjects?.code || "", `${g.mark}%`, g.grade_letter || "", g.comment || ""])
+                );
+              }} disabled={grades.length === 0}>
+                <FileDown className="w-4 h-4 mr-1" /> Download
+              </Button>
+            </div>
 
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5" /> Grades</CardTitle></CardHeader>
