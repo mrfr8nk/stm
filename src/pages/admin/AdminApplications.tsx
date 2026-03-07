@@ -8,8 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, CheckCircle, XCircle, Clock, Eye } from "lucide-react";
+import { FileText, Search, CheckCircle, XCircle, Clock, Eye, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+const generateCode = () => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "STM-";
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+};
 
 const AdminApplications = () => {
   const { user } = useAuth();
@@ -19,6 +26,7 @@ const AdminApplications = () => {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -30,16 +38,41 @@ const AdminApplications = () => {
   useEffect(() => { fetchData(); }, []);
 
   const updateStatus = async (id: string, status: string) => {
+    const app = applications.find(a => a.id === id);
+
+    if (status === "approved" && app) {
+      // Generate a student access code for the applicant
+      const code = generateCode();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30); // 30-day expiry
+
+      const { error: codeError } = await supabase.from("access_codes").insert({
+        code,
+        role: "student" as any,
+        created_by: user?.id,
+        expires_at: expiresAt.toISOString(),
+      });
+
+      if (codeError) {
+        toast({ title: "Error", description: "Failed to generate access code: " + codeError.message, variant: "destructive" });
+        return;
+      }
+
+      setGeneratedCode(code);
+    }
+
     const { error } = await supabase.from("applications").update({
       status,
       reviewed_by: user?.id,
       reviewed_at: new Date().toISOString(),
     }).eq("id", id);
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else {
-      toast({ title: `Application ${status}` });
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `Application ${status}`, description: status === "approved" ? "An access code has been generated." : undefined });
       fetchData();
-      setDetailOpen(false);
+      if (status !== "approved") setDetailOpen(false);
     }
   };
 
@@ -73,6 +106,13 @@ const AdminApplications = () => {
     rejected: applications.filter(a => a.status === "rejected").length,
   };
 
+  const copyCode = () => {
+    if (generatedCode) {
+      navigator.clipboard.writeText(generatedCode);
+      toast({ title: "Copied!", description: "Access code copied to clipboard." });
+    }
+  };
+
   const AppTable = ({ data }: { data: any[] }) => (
     <Table>
       <TableHeader>
@@ -102,7 +142,7 @@ const AdminApplications = () => {
               <TableCell className="text-sm text-muted-foreground">{new Date(a.created_at).toLocaleDateString()}</TableCell>
               <TableCell>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => { setSelected(a); setDetailOpen(true); }}>
+                  <Button variant="ghost" size="sm" onClick={() => { setSelected(a); setDetailOpen(true); setGeneratedCode(null); }}>
                     <Eye className="w-4 h-4" />
                   </Button>
                   {a.status === "pending" && (
@@ -129,7 +169,7 @@ const AdminApplications = () => {
       <div className="space-y-6">
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Applications</h1>
-          <p className="text-muted-foreground text-sm">Review student enrollment applications</p>
+          <p className="text-muted-foreground text-sm">Review student enrollment applications & access requests</p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -167,8 +207,8 @@ const AdminApplications = () => {
         </Tabs>
 
         {/* Detail Dialog */}
-        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-          <DialogContent className="max-w-lg">
+        <Dialog open={detailOpen} onOpenChange={(open) => { setDetailOpen(open); if (!open) setGeneratedCode(null); }}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Application Details</DialogTitle></DialogHeader>
             {selected && (
               <div className="space-y-4">
@@ -191,10 +231,25 @@ const AdminApplications = () => {
                   <div><span className="text-muted-foreground">Applied:</span> {new Date(selected.created_at).toLocaleString()}</div>
                   {selected.reviewed_at && <div><span className="text-muted-foreground">Reviewed:</span> {new Date(selected.reviewed_at).toLocaleString()}</div>}
                 </div>
-                {selected.status === "pending" && (
+
+                {/* Generated Access Code Display */}
+                {generatedCode && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-sm font-medium text-green-800 mb-2">✅ Access Code Generated for this applicant:</p>
+                    <div className="flex items-center gap-2">
+                      <code className="bg-white px-4 py-2 rounded border text-lg font-mono font-bold text-green-700 flex-1 text-center">{generatedCode}</code>
+                      <Button variant="outline" size="sm" onClick={copyCode}>
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-green-600 mt-2">Share this code with {selected.full_name} ({selected.email}) so they can complete registration. Expires in 30 days.</p>
+                  </div>
+                )}
+
+                {selected.status === "pending" && !generatedCode && (
                   <div className="flex gap-3 pt-2">
                     <Button className="flex-1" onClick={() => updateStatus(selected.id, "approved")}>
-                      <CheckCircle className="w-4 h-4 mr-2" /> Approve
+                      <CheckCircle className="w-4 h-4 mr-2" /> Approve & Generate Code
                     </Button>
                     <Button variant="destructive" className="flex-1" onClick={() => updateStatus(selected.id, "rejected")}>
                       <XCircle className="w-4 h-4 mr-2" /> Reject
