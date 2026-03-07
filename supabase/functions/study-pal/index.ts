@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -30,6 +30,8 @@ serve(async (req) => {
 - Creating study notes and summaries
 - Quiz practice and exam preparation
 - Study tips and time management advice
+- Analyzing images of textbook pages, handwritten problems, diagrams, charts, and graphs
+- Solving math/science problems from uploaded photos
 
 Guidelines:
 - Be encouraging and patient
@@ -37,6 +39,7 @@ Guidelines:
 - When explaining math or science, show step-by-step solutions
 - Reference the Zimbabwean curriculum (ZJC, O Level, A Level) when relevant
 - Use markdown formatting for clear, structured responses
+- When an image is provided, carefully analyze it and provide a detailed explanation or solution
 - If asked something inappropriate or off-topic, redirect to academics
 - Keep answers concise but thorough`
           },
