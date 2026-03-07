@@ -312,7 +312,7 @@ export const printReceipt = (record: any, studentName: string, zigRate: number, 
   <div class="receipt">
     <div class="receipt-header">
       <div class="school-name">St. Mary's High School</div>
-      <div class="school-sub">Excellence in Education</div>
+      <div class="school-sub">We Think We Can and Indeed We Can</div>
       <div class="receipt-badge">Fee Payment Receipt</div>
     </div>
 
