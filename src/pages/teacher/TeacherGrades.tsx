@@ -44,7 +44,7 @@ const TeacherGrades = () => {
         .select("*")
         .eq("subject_id", selectedAssignment.subject_id)
         .eq("class_id", selectedAssignment.class_id)
-        .eq("term", term)
+        .eq("term", term as any)
         .eq("teacher_id", user!.id);
 
       const gradeMap: Record<string, { mark: string; comment: string }> = {};
