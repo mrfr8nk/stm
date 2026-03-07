@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Save, Trash2, Edit, TrendingUp, TrendingDown, Award, BarChart3, RotateCcw } from "lucide-react";
+import { BookOpen, Save, Trash2, Edit, TrendingUp, TrendingDown, Award, BarChart3, RotateCcw, FileDown } from "lucide-react";
+import { exportCSV } from "@/lib/csv-export";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { getGrade, getGradeColor, getRowStyle, buildDistribution, type GradingScale } from "@/lib/grading";
 
