@@ -48,6 +48,7 @@ import AdminGrades from "./pages/admin/AdminGrades";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
 import AdminFees from "./pages/admin/AdminFees";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminApplications from "./pages/admin/AdminApplications";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ const App = () => (
             {/* Admin Portal */}
             <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["admin"]}><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/applications" element={<ProtectedRoute allowedRoles={["admin"]}><AdminApplications /></ProtectedRoute>} />
             <Route path="/admin/classes" element={<ProtectedRoute allowedRoles={["admin"]}><AdminClasses /></ProtectedRoute>} />
             <Route path="/admin/subjects" element={<ProtectedRoute allowedRoles={["admin"]}><AdminSubjects /></ProtectedRoute>} />
             <Route path="/admin/codes" element={<ProtectedRoute allowedRoles={["admin"]}><AdminCodes /></ProtectedRoute>} />

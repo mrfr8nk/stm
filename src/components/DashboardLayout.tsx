@@ -38,6 +38,7 @@ const studentNav: NavItem[] = [
 const adminNav: NavItem[] = [
   { label: "Dashboard", path: "/admin", icon: Home },
   { label: "Users", path: "/admin/users", icon: Users },
+  { label: "Applications", path: "/admin/applications", icon: FileText },
   { label: "Classes", path: "/admin/classes", icon: GraduationCap },
   { label: "Subjects", path: "/admin/subjects", icon: BookOpen },
   { label: "Access Codes", path: "/admin/codes", icon: Key },
