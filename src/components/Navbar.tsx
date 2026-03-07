@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, GraduationCap } from "lucide-react";
+import { Menu, X, GraduationCap, LogIn } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
 
 const navItems = [
@@ -26,7 +26,7 @@ const Navbar = () => {
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-6">
           {navItems.map((item) => (
             <Link
               key={item.path}
@@ -39,8 +39,15 @@ const Navbar = () => {
             </Link>
           ))}
           <Link
+            to="/login"
+            className="border border-primary text-primary px-4 py-2 rounded-lg font-body font-semibold hover:bg-primary hover:text-primary-foreground transition-all flex items-center gap-2 text-sm"
+          >
+            <LogIn className="w-4 h-4" />
+            Portal Login
+          </Link>
+          <Link
             to="/contact"
-            className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg font-body font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
+            className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg font-body font-semibold hover:opacity-90 transition-opacity flex items-center gap-2 text-sm"
           >
             <GraduationCap className="w-4 h-4" />
             Apply Now
@@ -70,9 +77,16 @@ const Navbar = () => {
               </Link>
             ))}
             <Link
+              to="/login"
+              onClick={() => setIsOpen(false)}
+              className="border border-primary text-primary px-5 py-2.5 rounded-lg font-body font-semibold text-center mt-2 flex items-center justify-center gap-2"
+            >
+              <LogIn className="w-4 h-4" /> Portal Login
+            </Link>
+            <Link
               to="/contact"
               onClick={() => setIsOpen(false)}
-              className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg font-body font-semibold text-center mt-2"
+              className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg font-body font-semibold text-center"
             >
               Apply Now
             </Link>
