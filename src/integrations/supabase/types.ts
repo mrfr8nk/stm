@@ -262,39 +262,48 @@ export type Database = {
           amount_due: number
           amount_paid: number
           created_at: string
+          currency: string | null
           deleted_at: string | null
           id: string
           notes: string | null
           payment_date: string | null
+          payment_method: string | null
           receipt_number: string | null
           student_id: string
           term: Database["public"]["Enums"]["school_term"]
+          zig_amount: number | null
         }
         Insert: {
           academic_year?: number
           amount_due: number
           amount_paid?: number
           created_at?: string
+          currency?: string | null
           deleted_at?: string | null
           id?: string
           notes?: string | null
           payment_date?: string | null
+          payment_method?: string | null
           receipt_number?: string | null
           student_id: string
           term: Database["public"]["Enums"]["school_term"]
+          zig_amount?: number | null
         }
         Update: {
           academic_year?: number
           amount_due?: number
           amount_paid?: number
           created_at?: string
+          currency?: string | null
           deleted_at?: string | null
           id?: string
           notes?: string | null
           payment_date?: string | null
+          payment_method?: string | null
           receipt_number?: string | null
           student_id?: string
           term?: Database["public"]["Enums"]["school_term"]
+          zig_amount?: number | null
         }
         Relationships: []
       }
