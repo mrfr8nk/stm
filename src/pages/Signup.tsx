@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, GraduationCap, BookOpen } from "lucide-react";
+import { UserPlus, GraduationCap, BookOpen, Shield } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
 
-type SignupRole = "student" | "teacher";
+type SignupRole = "student" | "teacher" | "admin";
 
 const roleConfig: Record<SignupRole, { label: string; icon: React.ElementType; description: string; color: string; bgColor: string }> = {
   student: { label: "Student", icon: GraduationCap, description: "Join as a student to view grades & reports", color: "text-accent", bgColor: "bg-accent/10 border-accent/30" },
   teacher: { label: "Teacher", icon: BookOpen, description: "Join as a teacher to manage classes", color: "text-secondary", bgColor: "bg-secondary/10 border-secondary/30" },
+  admin: { label: "Administrator", icon: Shield, description: "Register as an administrator with admin code", color: "text-primary", bgColor: "bg-primary/10 border-primary/30" },
 };
 
 const Signup = () => {
@@ -103,7 +104,7 @@ const Signup = () => {
         {/* Role Selection */}
         {!selectedRole ? (
           <div className="space-y-4">
-            {(["student", "teacher"] as SignupRole[]).map((role) => {
+            {(["student", "teacher", "admin"] as SignupRole[]).map((role) => {
               const config = roleConfig[role];
               return (
                 <Card
@@ -126,7 +127,7 @@ const Signup = () => {
             })}
 
             <p className="text-center text-sm text-muted-foreground mt-4">
-              Admin accounts are created by the system administrator.
+              You need an access code from the administration to register.
             </p>
 
             <div className="text-center mt-4 space-y-2">
