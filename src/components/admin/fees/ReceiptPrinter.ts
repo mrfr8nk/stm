@@ -1,6 +1,6 @@
 import { methodLabel } from "./FeeConstants";
 
-export const printReceipt = (record: any, studentName: string, zigRate: number) => {
+export const printReceipt = (record: any, studentName: string, zigRate: number, className?: string) => {
   const balance = Number(record.amount_due) - Number(record.amount_paid);
   const w = window.open("", "_blank", "width=400,height=600");
   if (!w) return;
@@ -27,6 +27,7 @@ export const printReceipt = (record: any, studentName: string, zigRate: number) 
       </div>
       <div class="row"><span>Date:</span><span>${record.payment_date || new Date().toLocaleDateString()}</span></div>
       <div class="row"><span>Student:</span><span>${studentName}</span></div>
+      ${className ? `<div class="row"><span>Class:</span><span>${className}</span></div>` : ""}
       <div class="row"><span>Year:</span><span>${record.academic_year}</span></div>
       <div class="row"><span>Term:</span><span>${record.term.replace("_", " ").toUpperCase()}</span></div>
       <div class="row"><span>Method:</span><span>${methodLabel((record as any).payment_method || "cash")}</span></div>
