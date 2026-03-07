@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   BookOpen, ClipboardCheck, Bell, DollarSign, TrendingUp,
-  FileText, Calendar, AlertTriangle, Brain, ArrowRight
+  FileText, Calendar, AlertTriangle, Brain, ArrowRight, UserCircle
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip
@@ -111,14 +111,43 @@ const StudentDashboard = () => {
           </Badge>
         </div>
 
+        {/* Profile Completion Prompt */}
+        {studentProfile && (() => {
+          const missing: string[] = [];
+          if (!profile?.avatar_url) missing.push("profile picture");
+          if (!studentProfile.date_of_birth) missing.push("date of birth");
+          if (!studentProfile.guardian_name) missing.push("guardian name");
+          if (!studentProfile.guardian_phone) missing.push("guardian phone");
+          if (!studentProfile.address) missing.push("address");
+          if (!studentProfile.emergency_contact) missing.push("emergency contact");
+          if (!studentProfile.national_id && !studentProfile.birth_cert_number) missing.push("ID/birth cert number");
+          if (missing.length === 0) return null;
+          return (
+            <Card className="border-l-4 border-l-primary bg-primary/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <UserCircle className="w-8 h-8 text-primary shrink-0" />
+                <div className="flex-1">
+                  <p className="font-bold text-foreground">Complete Your Profile</p>
+                  <p className="text-sm text-muted-foreground">
+                    Please set your {missing.slice(0, 3).join(", ")}{missing.length > 3 ? ` and ${missing.length - 3} more` : ""} to keep your records up to date.
+                  </p>
+                </div>
+                <Link to="/student/profile">
+                  <Badge className="cursor-pointer">Set Up Now <ArrowRight className="w-3 h-3 ml-1" /></Badge>
+                </Link>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* Fee Alert */}
         {feeBalance > 0 && (
-          <Card className="border-l-4 border-l-red-500 bg-red-500/5">
+          <Card className="border-l-4 border-l-destructive bg-destructive/5">
             <CardContent className="p-4 flex items-center gap-3">
-              <AlertTriangle className="w-6 h-6 text-red-600 shrink-0" />
+              <AlertTriangle className="w-6 h-6 text-destructive shrink-0" />
               <div className="flex-1">
-                <p className="font-bold text-red-700">Outstanding Fee Balance: ${feeBalance.toFixed(2)}</p>
-                <p className="text-sm text-red-600">Owing for: {unpaidTerms.join(", ")}</p>
+                <p className="font-bold text-destructive">Outstanding Fee Balance: ${feeBalance.toFixed(2)}</p>
+                <p className="text-sm text-destructive/80">Owing for: {unpaidTerms.join(", ")}</p>
               </div>
               <Link to="/student/fees">
                 <Badge variant="destructive">View Details <ArrowRight className="w-3 h-3 ml-1" /></Badge>
