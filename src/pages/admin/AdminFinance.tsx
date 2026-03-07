@@ -176,9 +176,9 @@ const AdminFinance = () => {
                   </TableHeader>
                   <TableBody>
                     {loading ? (
-                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                     ) : pettyCash.length === 0 ? (
-                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No petty cash records yet.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No petty cash records yet.</TableCell></TableRow>
                     ) : pettyCash.map(p => (
                       <TableRow key={p.id}>
                         <TableCell className="text-sm">{new Date(p.date).toLocaleDateString()}</TableCell>
@@ -187,8 +187,14 @@ const AdminFinance = () => {
                         <TableCell className="text-destructive font-bold">${Number(p.amount).toFixed(2)}</TableCell>
                         <TableCell className="text-sm">{p.payment_method}</TableCell>
                         <TableCell className="text-xs font-mono">{p.receipt_reference || "—"}</TableCell>
+                        <TableCell>
+                          {p.receipt_image_url ? (
+                            <button onClick={() => setViewingImage(p.receipt_image_url)} className="group">
+                              <img src={p.receipt_image_url} alt="Proof" className="w-10 h-10 rounded object-cover border border-border group-hover:ring-2 ring-primary transition-all" />
+                            </button>
+                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                        </TableCell>
                         <TableCell className="text-sm">{getName(p.recorded_by)}</TableCell>
-                        <TableCell><Button variant="ghost" size="sm" onClick={() => handleDeletePetty(p.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button></TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
