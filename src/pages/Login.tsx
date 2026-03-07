@@ -73,6 +73,40 @@ const Login = () => {
 
     const userRole = roleData?.role;
 
+    if (!userRole) {
+      // No role assigned — check if they have a pending application
+      const { data: appData } = await supabase
+        .from("applications")
+        .select("status")
+        .eq("user_id", data.user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      await supabase.auth.signOut();
+
+      if (appData?.status === "pending") {
+        toast({
+          title: "Application Pending",
+          description: "Your application is still under review. You will receive an email once a decision is made. Please be patient.",
+        });
+      } else if (appData?.status === "rejected") {
+        toast({
+          title: "Application Rejected",
+          description: "Unfortunately, your application was not approved. Please contact the school administration for more information.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Account Not Activated",
+          description: "Your account has not been assigned a role yet. Please contact the school administration.",
+          variant: "destructive",
+        });
+      }
+      setLoading(false);
+      return;
+    }
+
     if (userRole !== selectedPortal) {
       await supabase.auth.signOut();
       toast({
