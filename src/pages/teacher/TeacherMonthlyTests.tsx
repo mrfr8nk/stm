@@ -47,8 +47,15 @@ const TeacherMonthlyTests = () => {
     if (!selectedAssignment) return;
     const fetchData = async () => {
       const { data: studentData } = await supabase.from("student_profiles")
-        .select("*, profiles!student_profiles_user_id_fkey(full_name)")
+        .select("*")
         .eq("class_id", selectedAssignment.class_id).eq("is_active", true);
+      // Fetch profile names separately
+      const userIds = (studentData || []).map(s => s.user_id);
+      const { data: profilesData } = userIds.length > 0
+        ? await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds)
+        : { data: [] };
+      const profileMap = new Map((profilesData || []).map(p => [p.user_id, p.full_name]));
+      const enrichedStudents = (studentData || []).map(s => ({ ...s, profiles: { full_name: profileMap.get(s.user_id) || "" } }));
       setStudents(studentData || []);
 
       const { data: tests } = await supabase.from("monthly_tests")
