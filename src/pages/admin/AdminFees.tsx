@@ -427,9 +427,16 @@ const AdminFees = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {scholarships.length === 0 ? (
-                        <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No scholarships configured.</TableCell></TableRow>
-                      ) : scholarships.map(s => {
+                      {(() => {
+                        const sq = scholarshipSearch.toLowerCase();
+                        const filteredScholarships = scholarships.filter(s => {
+                          if (!sq) return true;
+                          const name = getStudentName(s.student_id).toLowerCase();
+                          return name.includes(sq) || (s.organization_name || "").toLowerCase().includes(sq);
+                        });
+                        return filteredScholarships.length === 0 ? (
+                          <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{sq ? "No matching scholarships." : "No scholarships configured."}</TableCell></TableRow>
+                        ) : filteredScholarships.map(s => {
                         const isExpired = s.end_date && new Date(s.end_date) < new Date();
                         return (
                           <TableRow key={s.id} className={!s.is_active ? "opacity-50" : ""}>
@@ -471,7 +478,8 @@ const AdminFees = () => {
                             </TableCell>
                           </TableRow>
                         );
-                      })}
+                      });
+                      })()}
                     </TableBody>
                   </Table>
                 </CardContent>
