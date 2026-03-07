@@ -7,7 +7,7 @@ import GlobalSearch from "@/components/GlobalSearch";
 import {
   Menu, X, LogOut, Home, Users, BookOpen, ClipboardCheck,
   FileText, Bell, Settings, BarChart3, Key, GraduationCap,
-  DollarSign, User, Receipt
+  DollarSign, User, Receipt, MessageSquare, Trophy
 } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
 
@@ -22,8 +22,10 @@ const teacherNav: NavItem[] = [
   { label: "My Classes", path: "/teacher/classes", icon: Users },
   { label: "Set Grades", path: "/teacher/grades", icon: BookOpen },
   { label: "Monthly Tests", path: "/teacher/monthly-tests", icon: BarChart3 },
+  { label: "Rankings", path: "/teacher/rankings", icon: Trophy },
   { label: "Attendance", path: "/teacher/attendance", icon: ClipboardCheck },
   { label: "Report Cards", path: "/teacher/reports", icon: FileText },
+  { label: "Messages", path: "/teacher/messages", icon: MessageSquare },
   { label: "Announcements", path: "/teacher/announcements", icon: Bell },
   { label: "Settings", path: "/teacher/profile", icon: Settings },
 ];
@@ -31,9 +33,11 @@ const teacherNav: NavItem[] = [
 const studentNav: NavItem[] = [
   { label: "Dashboard", path: "/student", icon: Home },
   { label: "My Grades", path: "/student/grades", icon: BookOpen },
+  { label: "Rankings", path: "/student/rankings", icon: Trophy },
   { label: "Attendance", path: "/student/attendance", icon: ClipboardCheck },
   { label: "Report Cards", path: "/student/reports", icon: FileText },
   { label: "Study Pal AI", path: "/student/study-pal", icon: BookOpen },
+  { label: "Messages", path: "/student/messages", icon: MessageSquare },
   { label: "Announcements", path: "/student/announcements", icon: Bell },
   { label: "Fees", path: "/student/fees", icon: DollarSign },
   { label: "Settings", path: "/student/profile", icon: Settings },
@@ -47,15 +51,25 @@ const adminNav: NavItem[] = [
   { label: "Subjects", path: "/admin/subjects", icon: BookOpen },
   { label: "Access Codes", path: "/admin/codes", icon: Key },
   { label: "Grades Overview", path: "/admin/grades", icon: BarChart3 },
+  { label: "Rankings", path: "/admin/rankings", icon: Trophy },
+  { label: "Messages", path: "/admin/messages", icon: MessageSquare },
   { label: "Announcements", path: "/admin/announcements", icon: Bell },
   { label: "Fee Management", path: "/admin/fees", icon: DollarSign },
   { label: "Finance & Petty Cash", path: "/admin/finance", icon: Receipt },
   { label: "Settings", path: "/admin/settings", icon: Settings },
 ];
 
+const parentNav: NavItem[] = [
+  { label: "Dashboard", path: "/parent", icon: Home },
+  { label: "Grades", path: "/parent/grades", icon: BookOpen },
+  { label: "Attendance", path: "/parent/attendance", icon: ClipboardCheck },
+  { label: "Fees", path: "/parent/fees", icon: DollarSign },
+  { label: "Messages", path: "/parent/messages", icon: MessageSquare },
+];
+
 interface DashboardLayoutProps {
   children: ReactNode;
-  role: "teacher" | "student" | "admin";
+  role: "teacher" | "student" | "admin" | "parent";
 }
 
 const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
@@ -64,7 +78,7 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const navItems = role === "admin" ? adminNav : role === "teacher" ? teacherNav : studentNav;
+  const navItems = role === "admin" ? adminNav : role === "teacher" ? teacherNav : role === "parent" ? parentNav : studentNav;
   const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
 
   const handleSignOut = async () => {
