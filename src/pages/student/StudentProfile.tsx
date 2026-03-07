@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { User, Save, GraduationCap, Heart, Shield } from "lucide-react";
+import AvatarUpload from "@/components/AvatarUpload";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const StudentProfile = () => {
   const { user, profile } = useAuth();
@@ -15,9 +17,10 @@ const StudentProfile = () => {
   const [phone, setPhone] = useState("");
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
 
   useEffect(() => {
-    if (profile) setFullName(profile.full_name || "");
+    if (profile) { setFullName(profile.full_name || ""); setAvatarUrl(profile.avatar_url || null); }
   }, [profile]);
 
   useEffect(() => {
@@ -46,9 +49,9 @@ const StudentProfile = () => {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-3xl font-bold">
-                {(profile?.full_name || "S").charAt(0)}
-              </div>
+              {user && (
+                <AvatarUpload userId={user.id} currentUrl={avatarUrl} name={profile?.full_name || "S"} onUploaded={setAvatarUrl} />
+              )}
               <div>
                 <p className="text-xl font-bold text-foreground">{profile?.full_name || "Student"}</p>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
@@ -67,6 +70,17 @@ const StudentProfile = () => {
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Theme */}
+        <Card>
+          <CardContent className="p-6 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-foreground">Appearance</p>
+              <p className="text-sm text-muted-foreground">Toggle between light and dark mode</p>
+            </div>
+            <ThemeToggle />
           </CardContent>
         </Card>
 
@@ -106,30 +120,12 @@ const StudentProfile = () => {
             <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="w-5 h-5" /> Identity & Guardian</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-foreground">National ID</label>
-                  <Input value={studentProfile.national_id || "Not provided"} disabled />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Birth Certificate No.</label>
-                  <Input value={studentProfile.birth_cert_number || "Not provided"} disabled />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Guardian Name</label>
-                  <Input value={studentProfile.guardian_name || "Not provided"} disabled />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Guardian Phone</label>
-                  <Input value={studentProfile.guardian_phone || "Not provided"} disabled />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Address</label>
-                  <Input value={studentProfile.address || "Not provided"} disabled />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Emergency Contact</label>
-                  <Input value={studentProfile.emergency_contact || "Not provided"} disabled />
-                </div>
+                <div><label className="text-sm font-medium text-foreground">National ID</label><Input value={studentProfile.national_id || "Not provided"} disabled /></div>
+                <div><label className="text-sm font-medium text-foreground">Birth Certificate No.</label><Input value={studentProfile.birth_cert_number || "Not provided"} disabled /></div>
+                <div><label className="text-sm font-medium text-foreground">Guardian Name</label><Input value={studentProfile.guardian_name || "Not provided"} disabled /></div>
+                <div><label className="text-sm font-medium text-foreground">Guardian Phone</label><Input value={studentProfile.guardian_phone || "Not provided"} disabled /></div>
+                <div><label className="text-sm font-medium text-foreground">Address</label><Input value={studentProfile.address || "Not provided"} disabled /></div>
+                <div><label className="text-sm font-medium text-foreground">Emergency Contact</label><Input value={studentProfile.emergency_contact || "Not provided"} disabled /></div>
               </div>
             </CardContent>
           </Card>
@@ -141,18 +137,9 @@ const StudentProfile = () => {
             <CardHeader><CardTitle className="flex items-center gap-2"><Heart className="w-5 h-5" /> Medical Information</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-foreground">Blood Type</label>
-                  <Input value={studentProfile.blood_type || "Not recorded"} disabled />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Allergies</label>
-                  <Input value={studentProfile.allergies || "None recorded"} disabled />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium text-foreground">Medical Conditions</label>
-                  <Input value={studentProfile.medical_conditions || "None recorded"} disabled />
-                </div>
+                <div><label className="text-sm font-medium text-foreground">Blood Type</label><Input value={studentProfile.blood_type || "Not recorded"} disabled /></div>
+                <div><label className="text-sm font-medium text-foreground">Allergies</label><Input value={studentProfile.allergies || "None recorded"} disabled /></div>
+                <div className="md:col-span-2"><label className="text-sm font-medium text-foreground">Medical Conditions</label><Input value={studentProfile.medical_conditions || "None recorded"} disabled /></div>
               </div>
             </CardContent>
           </Card>
