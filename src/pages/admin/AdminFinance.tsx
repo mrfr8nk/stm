@@ -256,8 +256,20 @@ const AdminFinance = () => {
                 <Input placeholder="Optional" value={newEntry.receipt_reference} onChange={e => setNewEntry({ ...newEntry, receipt_reference: e.target.value })} /></div>
               <div><label className="text-xs font-medium text-muted-foreground">Notes</label>
                 <Input placeholder="Optional notes" value={newEntry.notes} onChange={e => setNewEntry({ ...newEntry, notes: e.target.value })} /></div>
+              <ReceiptImageUpload
+                value={newEntry.receipt_image_url || null}
+                onChange={(url) => setNewEntry({ ...newEntry, receipt_image_url: url || "" })}
+                folder="petty-cash"
+              />
               <Button className="w-full" onClick={handleAddPettyCash}><Plus className="w-4 h-4 mr-2" /> Add Entry</Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Image preview dialog */}
+        <Dialog open={!!viewingImage} onOpenChange={() => setViewingImage(null)}>
+          <DialogContent className="max-w-2xl p-2">
+            {viewingImage && <img src={viewingImage} alt="Receipt proof" className="w-full rounded-lg" />}
           </DialogContent>
         </Dialog>
       </div>
