@@ -122,15 +122,19 @@ const MessagesPage = () => {
       return;
     }
 
-    const { data: conv, error } = await supabase.from("conversations").insert({
+    const convId = crypto.randomUUID();
+    const { error } = await supabase.from("conversations").insert({
+      id: convId,
       title: convTitle || null,
       type: "direct",
-    }).select().single();
+    });
 
-    if (error || !conv) {
-      toast({ title: "Error", description: error?.message, variant: "destructive" });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
+
+    const conv = { id: convId, title: convTitle || null, type: "direct", created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
 
     await supabase.from("conversation_participants").insert([
       { conversation_id: conv.id, user_id: user.id },
