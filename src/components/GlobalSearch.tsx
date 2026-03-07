@@ -52,7 +52,7 @@ const studentFeatures: SearchItem[] = [
 ];
 
 interface GlobalSearchProps {
-  role: "admin" | "teacher" | "student";
+  role: "admin" | "teacher" | "student" | "parent";
 }
 
 const GlobalSearch = ({ role }: GlobalSearchProps) => {
@@ -61,7 +61,7 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const features = role === "admin" ? adminFeatures : role === "teacher" ? teacherFeatures : studentFeatures;
+  const features = role === "admin" ? adminFeatures : role === "teacher" ? teacherFeatures : role === "parent" ? studentFeatures : studentFeatures;
 
   const filtered = query.trim().length === 0
     ? features
