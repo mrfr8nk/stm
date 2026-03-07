@@ -31,6 +31,7 @@ const studentNav: NavItem[] = [
   { label: "My Grades", path: "/student/grades", icon: BookOpen },
   { label: "Attendance", path: "/student/attendance", icon: ClipboardCheck },
   { label: "Report Cards", path: "/student/reports", icon: FileText },
+  { label: "Study Pal AI", path: "/student/study-pal", icon: BookOpen },
   { label: "Announcements", path: "/student/announcements", icon: Bell },
   { label: "Fees", path: "/student/fees", icon: DollarSign },
   { label: "Settings", path: "/student/profile", icon: Settings },
