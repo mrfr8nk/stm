@@ -372,6 +372,7 @@ const MessagesPage = () => {
                     msg={msg}
                     isMine={msg.sender_id === user?.id}
                     senderName={getName(msg.sender_id)}
+                    senderAvatar={getAvatar(msg.sender_id)}
                     isRead={!!readStatus[msg.id]}
                     onEdit={editMessage}
                     onDelete={deleteMessage}
