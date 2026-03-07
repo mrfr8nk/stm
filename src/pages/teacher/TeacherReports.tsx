@@ -44,11 +44,21 @@ const TeacherReports = () => {
   useEffect(() => {
     if (!selectedClassId) return;
     const fetchData = async () => {
-      const [studentsRes, gradesRes] = await Promise.all([
-        supabase.from("student_profiles").select("*, profiles!student_profiles_user_id_fkey(full_name)").eq("class_id", selectedClassId).eq("is_active", true),
+      const [spRes, gradesRes] = await Promise.all([
+        supabase.from("student_profiles").select("*").eq("class_id", selectedClassId).eq("is_active", true),
         supabase.from("grades").select("*, subjects(name, code)").eq("class_id", selectedClassId).eq("term", term as any).eq("academic_year", year).is("deleted_at", null),
       ]);
-      setStudents(studentsRes.data || []);
+      const spData = spRes.data || [];
+      if (spData.length > 0) {
+        const userIds = spData.map(s => s.user_id);
+        const { data: profilesData } = await supabase.from("profiles")
+          .select("user_id, full_name").in("user_id", userIds);
+        const profileMap: Record<string, any> = {};
+        (profilesData || []).forEach(p => { profileMap[p.user_id] = p; });
+        setStudents(spData.map(s => ({ ...s, profiles: profileMap[s.user_id] || null })));
+      } else {
+        setStudents([]);
+      }
       setGrades(gradesRes.data || []);
     };
     fetchData();

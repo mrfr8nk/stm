@@ -23,10 +23,20 @@ const AdminAnnouncements = () => {
   const [editOpen, setEditOpen] = useState(false);
 
   const fetchData = async () => {
-    const { data } = await supabase.from("announcements").select("*, profiles:author_id(full_name)").order("is_pinned", { ascending: false }).order("created_at", { ascending: false });
+    const { data } = await supabase.from("announcements").select("*").order("is_pinned", { ascending: false }).order("created_at", { ascending: false });
     const all = data || [];
-    setAnnouncements(all.filter((a: any) => !a.deleted_at));
-    setDeletedAnn(all.filter((a: any) => a.deleted_at));
+    if (all.length > 0) {
+      const authorIds = [...new Set(all.map(a => a.author_id))];
+      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name").in("user_id", authorIds);
+      const profileMap: Record<string, any> = {};
+      (profiles || []).forEach(p => { profileMap[p.user_id] = p; });
+      const enriched = all.map(a => ({ ...a, profiles: profileMap[a.author_id] || null }));
+      setAnnouncements(enriched.filter((a: any) => !a.deleted_at));
+      setDeletedAnn(enriched.filter((a: any) => a.deleted_at));
+    } else {
+      setAnnouncements([]);
+      setDeletedAnn([]);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);

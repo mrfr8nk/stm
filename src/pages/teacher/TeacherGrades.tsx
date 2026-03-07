@@ -37,10 +37,18 @@ const TeacherGrades = () => {
 
   const fetchGrades = async () => {
     if (!selectedAssignment) return;
-    const { data: studentData } = await supabase.from("student_profiles")
-      .select("*, profiles!student_profiles_user_id_fkey(full_name)")
-      .eq("class_id", selectedAssignment.class_id).eq("is_active", true);
-    setStudents(studentData || []);
+    const { data: spData } = await supabase.from("student_profiles")
+      .select("*").eq("class_id", selectedAssignment.class_id).eq("is_active", true);
+    if (spData && spData.length > 0) {
+      const userIds = spData.map(s => s.user_id);
+      const { data: profilesData } = await supabase.from("profiles")
+        .select("user_id, full_name").in("user_id", userIds);
+      const profileMap: Record<string, any> = {};
+      (profilesData || []).forEach(p => { profileMap[p.user_id] = p; });
+      setStudents(spData.map(s => ({ ...s, profiles: profileMap[s.user_id] || null })));
+    } else {
+      setStudents([]);
+    }
 
     const { data: existing } = await supabase.from("grades").select("*")
       .eq("subject_id", selectedAssignment.subject_id).eq("class_id", selectedAssignment.class_id)

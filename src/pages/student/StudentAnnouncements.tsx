@@ -8,8 +8,19 @@ const StudentAnnouncements = () => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase.from("announcements").select("*, profiles:author_id(full_name)").is("deleted_at", null).order("is_pinned", { ascending: false }).order("created_at", { ascending: false })
-      .then(({ data }) => setAnnouncements(data || []));
+    const fetchAnn = async () => {
+      const { data } = await supabase.from("announcements").select("*").is("deleted_at", null).order("is_pinned", { ascending: false }).order("created_at", { ascending: false });
+      if (data && data.length > 0) {
+        const authorIds = [...new Set(data.map(a => a.author_id))];
+        const { data: profiles } = await supabase.from("profiles").select("user_id, full_name").in("user_id", authorIds);
+        const profileMap: Record<string, any> = {};
+        (profiles || []).forEach(p => { profileMap[p.user_id] = p; });
+        setAnnouncements(data.map(a => ({ ...a, profiles: profileMap[a.author_id] || null })));
+      } else {
+        setAnnouncements([]);
+      }
+    };
+    fetchAnn();
   }, []);
 
   return (
