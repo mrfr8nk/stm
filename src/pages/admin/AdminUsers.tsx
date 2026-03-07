@@ -34,6 +34,7 @@ const AdminUsers = () => {
       supabase.from("teacher_profiles").select("*"),
     ]);
     const roleMap: Record<string, string> = {};
+    (rolesRes.data || []).forEach((r: any) => { roleMap[r.user_id] = r.role; });
     const spMap: Record<string, any> = {};
     (studentRes.data || []).forEach((s: any) => { spMap[s.user_id] = s; });
     setUsers((profilesRes.data || []).map((p: any) => ({ ...p, role: roleMap[p.user_id] || "unassigned", studentProfile: spMap[p.user_id] || null })));
