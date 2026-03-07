@@ -498,6 +498,48 @@ export type Database = {
           },
         ]
       }
+      petty_cash: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          date: string
+          deleted_at: string | null
+          description: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          receipt_reference: string | null
+          recorded_by: string
+        }
+        Insert: {
+          amount: number
+          category?: string
+          created_at?: string
+          date?: string
+          deleted_at?: string | null
+          description: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          receipt_reference?: string | null
+          recorded_by: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          date?: string
+          deleted_at?: string | null
+          description?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          receipt_reference?: string | null
+          recorded_by?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
