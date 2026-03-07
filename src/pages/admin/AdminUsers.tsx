@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Search, GraduationCap, BookOpen, Shield, Trash2, Eye, ArrowUpDown, Mail, Phone, Save, Edit, UserX, UserCheck } from "lucide-react";
+import { Users, Search, GraduationCap, BookOpen, Shield, Trash2, Eye, ArrowUpDown, Mail, Phone, Save, Edit, UserX, UserCheck, Link2, Unlink, UserPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const AdminUsers = () => {
   const { toast } = useToast();
@@ -18,20 +19,24 @@ const AdminUsers = () => {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [studentProfiles, setStudentProfiles] = useState<any[]>([]);
   const [teacherProfiles, setTeacherProfiles] = useState<any[]>([]);
+  const [parentLinks, setParentLinks] = useState<any[]>([]);
   const [sortField, setSortField] = useState<string>("full_name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [detailOpen, setDetailOpen] = useState(false);
   const [editingSP, setEditingSP] = useState(false);
   const [spForm, setSpForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
+  const [linkStudentId, setLinkStudentId] = useState("");
+  const [linking, setLinking] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
-    const [profilesRes, rolesRes, studentRes, teacherRes] = await Promise.all([
+    const [profilesRes, rolesRes, studentRes, teacherRes, linksRes] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("*"),
       supabase.from("student_profiles").select("*"),
       supabase.from("teacher_profiles").select("*"),
+      supabase.from("parent_student_links").select("*"),
     ]);
     const roleMap: Record<string, string> = {};
     (rolesRes.data || []).forEach((r: any) => { roleMap[r.user_id] = r.role; });
@@ -39,8 +44,8 @@ const AdminUsers = () => {
     (studentRes.data || []).forEach((s: any) => { spMap[s.user_id] = s; });
     setUsers((profilesRes.data || []).map((p: any) => ({ ...p, role: roleMap[p.user_id] || "unassigned", studentProfile: spMap[p.user_id] || null })));
     setStudentProfiles(studentRes.data || []);
-    setStudentProfiles(studentRes.data || []);
     setTeacherProfiles(teacherRes.data || []);
+    setParentLinks(linksRes.data || []);
     setLoading(false);
   };
 
@@ -72,6 +77,7 @@ const AdminUsers = () => {
       });
     }
     setEditingSP(false);
+    setLinkStudentId("");
     setDetailOpen(true);
   };
 
@@ -94,10 +100,56 @@ const AdminUsers = () => {
     const { error } = await supabase.from("student_profiles").update({ is_active: !currentlyActive }).eq("user_id", userId);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else {
-      toast({ title: currentlyActive ? "Student Transferred" : "Student Reactivated", description: currentlyActive ? "Student has been marked as transferred and deactivated." : "Student has been reactivated." });
+      toast({ title: currentlyActive ? "Student Transferred" : "Student Reactivated" });
       fetchData();
       setDetailOpen(false);
     }
+  };
+
+  // Parent-child linking
+  const getLinkedChildren = (parentId: string) => {
+    return parentLinks
+      .filter(l => l.parent_id === parentId)
+      .map(l => {
+        const sp = studentProfiles.find(s => s.user_id === l.student_id);
+        const profile = users.find(u => u.user_id === l.student_id);
+        return { ...l, studentProfile: sp, profile };
+      });
+  };
+
+  const getLinkedParents = (studentId: string) => {
+    return parentLinks
+      .filter(l => l.student_id === studentId)
+      .map(l => {
+        const profile = users.find(u => u.user_id === l.parent_id);
+        return { ...l, profile };
+      });
+  };
+
+  const handleLinkChild = async (parentId: string) => {
+    if (!linkStudentId) return;
+    setLinking(true);
+    const existing = parentLinks.find(l => l.parent_id === parentId && l.student_id === linkStudentId);
+    if (existing) {
+      toast({ title: "Already Linked", description: "This child is already linked to this parent.", variant: "destructive" });
+      setLinking(false);
+      return;
+    }
+    const { error } = await supabase.from("parent_student_links").insert({ parent_id: parentId, student_id: linkStudentId });
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else {
+      toast({ title: "Child Linked!", description: "Parent can now view their child's data." });
+      setLinkStudentId("");
+      fetchData();
+    }
+    setLinking(false);
+  };
+
+  const handleUnlinkChild = async (linkId: string) => {
+    if (!confirm("Unlink this child from the parent?")) return;
+    const { error } = await supabase.from("parent_student_links").delete().eq("id", linkId);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else { toast({ title: "Child Unlinked" }); fetchData(); }
   };
 
   const sorted = (list: any[]) => {
@@ -116,8 +168,10 @@ const AdminUsers = () => {
   const filterByRole = (role: string) => users.filter(u => u.role === role && ((u.full_name || "").toLowerCase().includes(search.toLowerCase()) || (u.email || "").toLowerCase().includes(search.toLowerCase())));
   const allFiltered = users.filter(u => (u.full_name || "").toLowerCase().includes(search.toLowerCase()) || (u.email || "").toLowerCase().includes(search.toLowerCase()));
 
+  const studentUsers = users.filter(u => u.role === "student");
+
   const roleBadge = (role: string) => {
-    const colors: Record<string, string> = { admin: "bg-primary text-primary-foreground", teacher: "bg-secondary text-secondary-foreground", student: "bg-accent text-accent-foreground" };
+    const colors: Record<string, string> = { admin: "bg-primary text-primary-foreground", teacher: "bg-secondary text-secondary-foreground", student: "bg-accent text-accent-foreground", parent: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[role] || "bg-muted text-muted-foreground"}`}>{role}</span>;
   };
 
@@ -176,7 +230,7 @@ const AdminUsers = () => {
     </Table>
   );
 
-  const stats = { total: users.length, admins: users.filter(u => u.role === "admin").length, teachers: users.filter(u => u.role === "teacher").length, students: users.filter(u => u.role === "student").length };
+  const stats = { total: users.length, admins: users.filter(u => u.role === "admin").length, teachers: users.filter(u => u.role === "teacher").length, students: users.filter(u => u.role === "student").length, parents: users.filter(u => u.role === "parent").length };
 
   const spField = (label: string, key: string, type = "text") => (
     <div>
@@ -186,6 +240,113 @@ const AdminUsers = () => {
     </div>
   );
 
+  // Parent linking section in detail dialog
+  const ParentLinkSection = () => {
+    if (!selectedUser) return null;
+    const isParent = selectedUser.role === "parent";
+    const isStudent = selectedUser.role === "student";
+
+    if (isParent) {
+      const linkedChildren = getLinkedChildren(selectedUser.user_id);
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2"><Link2 className="w-4 h-4" /> Linked Children</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {linkedChildren.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No children linked yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {linkedChildren.map(lc => (
+                  <div key={lc.id} className="flex items-center justify-between p-2 rounded-lg border bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      {lc.profile?.avatar_url ? (
+                        <img src={lc.profile.avatar_url} className="w-8 h-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold">
+                          {(lc.profile?.full_name || "S").charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-medium">{lc.profile?.full_name || "Unknown"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {lc.studentProfile?.student_id || ""} • Form {lc.studentProfile?.form || "?"}
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleUnlinkChild(lc.id)}>
+                      <Unlink className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2 items-end pt-2 border-t">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-muted-foreground">Link a Student</label>
+                <Select value={linkStudentId} onValueChange={setLinkStudentId}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select student..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {studentUsers.map(s => {
+                      const sp = studentProfiles.find(sp => sp.user_id === s.user_id);
+                      const alreadyLinked = parentLinks.some(l => l.parent_id === selectedUser.user_id && l.student_id === s.user_id);
+                      if (alreadyLinked) return null;
+                      return (
+                        <SelectItem key={s.user_id} value={s.user_id}>
+                          {s.full_name} {sp?.student_id ? `(${sp.student_id})` : ""}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button size="sm" onClick={() => handleLinkChild(selectedUser.user_id)} disabled={!linkStudentId || linking}>
+                <UserPlus className="w-4 h-4 mr-1" /> {linking ? "Linking..." : "Link"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (isStudent) {
+      const linkedParents = getLinkedParents(selectedUser.user_id);
+      if (linkedParents.length === 0) return null;
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2"><Link2 className="w-4 h-4" /> Linked Parents</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {linkedParents.map(lp => (
+                <div key={lp.id} className="flex items-center justify-between p-2 rounded-lg border bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-xs font-bold text-amber-700">
+                      {(lp.profile?.full_name || "P").charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{lp.profile?.full_name || "Unknown"}</p>
+                      <p className="text-xs text-muted-foreground">{lp.profile?.email || ""}</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => handleUnlinkChild(lp.id)}>
+                    <Unlink className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
@@ -193,12 +354,13 @@ const AdminUsers = () => {
           <div><h1 className="font-display text-2xl font-bold text-foreground">User Management</h1><p className="text-muted-foreground text-sm">Manage all system users</p></div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
             { label: "Total Users", value: stats.total, icon: Users, color: "text-primary" },
             { label: "Administrators", value: stats.admins, icon: Shield, color: "text-destructive" },
             { label: "Teachers", value: stats.teachers, icon: BookOpen, color: "text-secondary" },
             { label: "Students", value: stats.students, icon: GraduationCap, color: "text-accent" },
+            { label: "Parents", value: stats.parents, icon: UserPlus, color: "text-amber-600" },
           ].map(s => (
             <Card key={s.label}><CardContent className="flex items-center gap-3 p-4">
               <div className={`p-2 rounded-lg bg-muted ${s.color}`}><s.icon className="w-5 h-5" /></div>
@@ -214,14 +376,16 @@ const AdminUsers = () => {
 
         <Tabs defaultValue="all">
           <TabsList>
-            <TabsTrigger value="all">All Users ({stats.total})</TabsTrigger>
+            <TabsTrigger value="all">All ({stats.total})</TabsTrigger>
             <TabsTrigger value="teachers">Teachers ({stats.teachers})</TabsTrigger>
             <TabsTrigger value="students">Students ({stats.students})</TabsTrigger>
+            <TabsTrigger value="parents">Parents ({stats.parents})</TabsTrigger>
             <TabsTrigger value="admins">Admins ({stats.admins})</TabsTrigger>
           </TabsList>
           <TabsContent value="all"><Card><CardContent className="p-0"><UserTable data={allFiltered} /></CardContent></Card></TabsContent>
           <TabsContent value="teachers"><Card><CardHeader><CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5" /> Teachers</CardTitle></CardHeader><CardContent className="p-0"><UserTable data={filterByRole("teacher")} showRole={false} /></CardContent></Card></TabsContent>
           <TabsContent value="students"><Card><CardHeader><CardTitle className="flex items-center gap-2"><GraduationCap className="w-5 h-5" /> Students</CardTitle></CardHeader><CardContent className="p-0"><UserTable data={filterByRole("student")} showRole={false} /></CardContent></Card></TabsContent>
+          <TabsContent value="parents"><Card><CardHeader><CardTitle className="flex items-center gap-2"><UserPlus className="w-5 h-5" /> Parents</CardTitle></CardHeader><CardContent className="p-0"><UserTable data={filterByRole("parent")} showRole={false} /></CardContent></Card></TabsContent>
           <TabsContent value="admins"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Shield className="w-5 h-5" /> Administrators</CardTitle></CardHeader><CardContent className="p-0"><UserTable data={filterByRole("admin")} showRole={false} /></CardContent></Card></TabsContent>
         </Tabs>
 
@@ -249,9 +413,11 @@ const AdminUsers = () => {
                   <div><span className="text-muted-foreground">Joined:</span> {new Date(selectedUser.created_at).toLocaleDateString()}</div>
                 </div>
 
+                {/* Parent-Child Linking Section */}
+                <ParentLinkSection />
+
                 {selectedUser.studentProfile && (
                   <>
-                    {/* Transfer/Status Banner */}
                     <div className={`flex items-center justify-between p-3 rounded-lg border ${selectedUser.studentProfile.is_active === false ? "bg-destructive/5 border-destructive/20" : "bg-green-500/5 border-green-500/20"}`}>
                       <div className="flex items-center gap-2">
                         {selectedUser.studentProfile.is_active === false ? (
