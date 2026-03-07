@@ -6,14 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, GraduationCap, BookOpen, Shield, Send, Loader2, CheckCircle } from "lucide-react";
+import { UserPlus, GraduationCap, BookOpen, Shield, Send, Loader2, CheckCircle, Users } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
 
-type SignupRole = "student" | "teacher" | "admin";
+type SignupRole = "student" | "teacher" | "parent" | "admin";
 
 const roleConfig: Record<SignupRole, { label: string; icon: React.ElementType; description: string; color: string; bgColor: string }> = {
   student: { label: "Student", icon: GraduationCap, description: "Join as a student to view grades & reports", color: "text-accent", bgColor: "bg-accent/10 border-accent/30" },
   teacher: { label: "Teacher", icon: BookOpen, description: "Join as a teacher to manage classes", color: "text-secondary", bgColor: "bg-secondary/10 border-secondary/30" },
+  parent: { label: "Parent", icon: Users, description: "Join as a parent to monitor your child's progress", color: "text-amber-600", bgColor: "bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800" },
   admin: { label: "Administrator", icon: Shield, description: "Register as an administrator with admin code", color: "text-primary", bgColor: "bg-primary/10 border-primary/30" },
 };
 
@@ -275,7 +276,7 @@ const Signup = () => {
 
         {!selectedRole ? (
           <div className="space-y-4">
-            {(["student", "teacher", "admin"] as SignupRole[]).map((role) => {
+            {(["student", "teacher", "parent", "admin"] as SignupRole[]).map((role) => {
               const config = roleConfig[role];
               return (
                 <Card key={role} className={`cursor-pointer transition-all hover:shadow-card-hover border-2 hover:scale-[1.02] ${config.bgColor}`} onClick={() => setSelectedRole(role)}>
