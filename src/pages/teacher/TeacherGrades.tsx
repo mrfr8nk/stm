@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, Save, Trash2, Edit, TrendingUp, TrendingDown, Award, BarChart3, RotateCcw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { getGrade, getGradeColor, getRowStyle, buildDistribution, type GradingScale } from "@/lib/grading";
 
 const TeacherGrades = () => {
   const { user } = useAuth();
@@ -30,12 +31,21 @@ const TeacherGrades = () => {
   const [distribution, setDistribution] = useState<any[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const [selectedClassId, setSelectedClassId] = useState<string>("");
+  const [gradingScales, setGradingScales] = useState<GradingScale[]>([]);
 
   useEffect(() => {
     if (!user) return;
     supabase.from("teacher_assignments").select("*, classes(*), subjects(*)")
       .eq("teacher_id", user.id).then(({ data }) => setAssignments(data || []));
   }, [user]);
+
+  // Fetch grading scales when assignment changes
+  useEffect(() => {
+    if (!selectedAssignment?.classes?.level) { setGradingScales([]); return; }
+    supabase.from("grading_scales").select("*")
+      .eq("level", selectedAssignment.classes.level)
+      .then(({ data }) => setGradingScales((data as GradingScale[]) || []));
+  }, [selectedAssignment]);
 
   const fetchGrades = async () => {
     if (!selectedAssignment) return;
@@ -66,26 +76,18 @@ const TeacherGrades = () => {
     (existing || []).forEach(g => { gradeMap[g.student_id] = { mark: g.mark.toString(), comment: g.comment || "" }; });
     setGrades(gradeMap);
 
-    // Stats
+    // Stats & distribution
     if (existing && existing.length > 0) {
       const marks = existing.map(g => Number(g.mark));
       setStats({ highest: Math.max(...marks), lowest: Math.min(...marks), average: Math.round(marks.reduce((a, b) => a + b, 0) / marks.length) });
-      const ranges = [
-        { name: "75-100 (A)", count: 0 }, { name: "60-74 (B)", count: 0 },
-        { name: "50-59 (C)", count: 0 }, { name: "40-49 (D)", count: 0 }, { name: "0-39 (F)", count: 0 },
-      ];
-      marks.forEach(m => {
-        if (m >= 75) ranges[0].count++; else if (m >= 60) ranges[1].count++;
-        else if (m >= 50) ranges[2].count++; else if (m >= 40) ranges[3].count++; else ranges[4].count++;
-      });
-      setDistribution(ranges.filter(r => r.count > 0));
+      setDistribution(buildDistribution(marks, gradingScales));
     } else {
       setStats({ highest: 0, lowest: 0, average: 0 });
       setDistribution([]);
     }
   };
 
-  useEffect(() => { fetchGrades(); }, [selectedAssignment, term, user]);
+  useEffect(() => { fetchGrades(); }, [selectedAssignment, term, user, gradingScales]);
 
   const handleSave = async () => {
     if (!selectedAssignment || !user) return;
@@ -127,20 +129,11 @@ const TeacherGrades = () => {
     fetchGrades();
   };
 
-  const getMarkColor = (mark: number) => {
-    if (mark >= 75) return "text-green-600 bg-green-500/10";
-    if (mark >= 50) return "text-yellow-600 bg-yellow-500/10";
-    return "text-red-600 bg-red-500/10";
-  };
-
   // Derive unique subjects and classes for filters
   const uniqueSubjects = Array.from(new Map(assignments.map(a => [a.subject_id, a.subjects?.name || "Subject"])).entries());
-
-  // Filter classes based on selected subject
   const classesForSubject = assignments.filter(a => !selectedSubjectId || a.subject_id === selectedSubjectId);
   const uniqueClasses = Array.from(new Map(classesForSubject.map(a => [a.class_id, a.classes?.name || "Class"])).entries());
 
-  // Auto-select assignment when both subject and class are picked
   useEffect(() => {
     if (selectedSubjectId && selectedClassId) {
       const match = assignments.find(a => a.subject_id === selectedSubjectId && a.class_id === selectedClassId);
@@ -239,15 +232,16 @@ const TeacherGrades = () => {
                     {students.map((s, i) => {
                       const existing = existingGrades.find(g => g.student_id === s.user_id);
                       const mark = grades[s.user_id]?.mark || "";
+                      const grade = mark ? getGrade(Number(mark), gradingScales) : "";
                       return (
                         <div key={s.id} className={`flex flex-wrap items-center gap-3 p-3 rounded-lg border-l-4 transition-all ${
-                          mark ? (Number(mark) >= 75 ? "border-l-green-500 bg-green-500/5" : Number(mark) >= 50 ? "border-l-yellow-500 bg-yellow-500/5" : "border-l-red-500 bg-red-500/5") : "border-l-transparent bg-muted/50"
+                          grade ? getRowStyle(grade) : "border-l-transparent bg-muted/50"
                         }`}>
                           <span className="w-8 text-sm text-muted-foreground">{i + 1}.</span>
                           <span className="flex-1 min-w-[150px] font-medium text-foreground">{s.profiles?.full_name || "Student"}</span>
                           <Input type="number" min={0} max={100} placeholder="Mark" className="w-24"
                             value={mark} onChange={e => setGrades(prev => ({ ...prev, [s.user_id]: { ...prev[s.user_id], mark: e.target.value, comment: prev[s.user_id]?.comment || "" } }))} />
-                          {mark && <span className={`px-2 py-1 rounded text-xs font-bold ${getMarkColor(Number(mark))}`}>{Number(mark)}%</span>}
+                          {grade && <span className={`px-2 py-1 rounded text-xs font-bold ${getGradeColor(grade)}`}>{grade}</span>}
                           <Input placeholder="Comment" className="flex-1 min-w-[150px]"
                             value={grades[s.user_id]?.comment || ""} onChange={e => setGrades(prev => ({ ...prev, [s.user_id]: { ...prev[s.user_id], comment: e.target.value, mark: prev[s.user_id]?.mark || "" } }))} />
                           {existing && (
@@ -291,6 +285,7 @@ const TeacherGrades = () => {
           <DialogContent className="max-w-sm">
             <DialogHeader><DialogTitle>Edit Grade</DialogTitle></DialogHeader>
             <Input type="number" min={0} max={100} placeholder="Mark" value={editMark} onChange={e => setEditMark(e.target.value)} />
+            {editMark && <span className={`px-2 py-1 rounded text-xs font-bold self-start ${getGradeColor(getGrade(Number(editMark), gradingScales))}`}>{getGrade(Number(editMark), gradingScales)}</span>}
             <Input placeholder="Comment" value={editComment} onChange={e => setEditComment(e.target.value)} />
             <Button onClick={handleEditSave}>Save</Button>
           </DialogContent>

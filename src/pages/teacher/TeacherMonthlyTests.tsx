@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   BarChart3, Save, Trash2, Edit, TrendingUp, TrendingDown,
@@ -16,6 +15,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend
 } from "recharts";
+import { getGrade, getGradeColor, getRowStyle, buildDistribution, type GradingScale } from "@/lib/grading";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -36,6 +36,7 @@ const TeacherMonthlyTests = () => {
   const [monthlyTrend, setMonthlyTrend] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState<"name" | "mark">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [gradingScales, setGradingScales] = useState<GradingScale[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -43,13 +44,20 @@ const TeacherMonthlyTests = () => {
       .then(({ data }) => setAssignments(data || []));
   }, [user]);
 
+  // Fetch grading scales when assignment changes
+  useEffect(() => {
+    if (!selectedAssignment?.classes?.level) { setGradingScales([]); return; }
+    supabase.from("grading_scales").select("*")
+      .eq("level", selectedAssignment.classes.level)
+      .then(({ data }) => setGradingScales((data as GradingScale[]) || []));
+  }, [selectedAssignment]);
+
   useEffect(() => {
     if (!selectedAssignment) return;
     const fetchData = async () => {
       const { data: studentData } = await supabase.from("student_profiles")
         .select("*")
         .eq("class_id", selectedAssignment.class_id).eq("is_active", true);
-      // Fetch profile names separately
       const userIds = (studentData || []).map(s => s.user_id);
       const { data: profilesData } = userIds.length > 0
         ? await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds)
@@ -144,7 +152,7 @@ const TeacherMonthlyTests = () => {
     const headers = ["#", "Student Name", "Mark (%)", "Grade"];
     const rows = sortedStudents.map((s, i) => {
       const mark = marks[s.user_id] || "";
-      const grade = mark ? (Number(mark) >= 75 ? "A" : Number(mark) >= 60 ? "B" : Number(mark) >= 50 ? "C" : Number(mark) >= 40 ? "D" : "F") : "";
+      const grade = mark ? getGrade(Number(mark), gradingScales) : "";
       return [i + 1, s.profiles?.full_name || "", mark, grade];
     });
     const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
@@ -153,12 +161,6 @@ const TeacherMonthlyTests = () => {
     const a = document.createElement("a"); a.href = url;
     a.download = `monthly-test-${selectedAssignment?.subjects?.name}-${MONTHS[month - 1]}-${year}.csv`; a.click();
     URL.revokeObjectURL(url);
-  };
-
-  const getMarkColor = (mark: number) => {
-    if (mark >= 75) return "text-green-600 bg-green-500/10";
-    if (mark >= 50) return "text-yellow-600 bg-yellow-500/10";
-    return "text-red-600 bg-red-500/10";
   };
 
   const sortedStudents = [...students].sort((a, b) => {
@@ -265,26 +267,13 @@ const TeacherMonthlyTests = () => {
               </Card>
             )}
 
-            {monthlyTrend.length === 1 && (
+            {/* Distribution Chart — only when we have data for this month */}
+            {existingTests.length > 0 && gradingScales.length > 0 && (
               <Card>
                 <CardHeader><CardTitle className="text-lg">Distribution — {MONTHS[month - 1]} {year}</CardTitle></CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={(() => {
-                      const ranges = [
-                        { name: "75-100", count: 0 }, { name: "60-74", count: 0 },
-                        { name: "50-59", count: 0 }, { name: "40-49", count: 0 }, { name: "0-39", count: 0 }
-                      ];
-                      existingTests.forEach(t => {
-                        const m = Number(t.mark);
-                        if (m >= 75) ranges[0].count++;
-                        else if (m >= 60) ranges[1].count++;
-                        else if (m >= 50) ranges[2].count++;
-                        else if (m >= 40) ranges[3].count++;
-                        else ranges[4].count++;
-                      });
-                      return ranges.filter(r => r.count > 0);
-                    })()}>
+                    <BarChart data={buildDistribution(existingTests.map(t => Number(t.mark)), gradingScales)}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                       <YAxis tick={{ fontSize: 12 }} />
@@ -324,10 +313,11 @@ const TeacherMonthlyTests = () => {
                   <div className="space-y-2">
                     {sortedStudents.map((s, i) => {
                       const mark = marks[s.user_id] || "";
+                      const grade = mark ? getGrade(Number(mark), gradingScales) : "";
                       const existing = existingTests.find(t => t.student_id === s.user_id);
                       return (
-                        <div key={s.id} className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                          mark ? (Number(mark) >= 75 ? "bg-green-500/5 border-l-4 border-l-green-500" : Number(mark) >= 50 ? "bg-yellow-500/5 border-l-4 border-l-yellow-500" : "bg-red-500/5 border-l-4 border-l-red-500") : "bg-muted/50 border-l-4 border-l-transparent"
+                        <div key={s.id} className={`flex items-center gap-3 p-3 rounded-lg transition-all border-l-4 ${
+                          grade ? getRowStyle(grade) : "bg-muted/50 border-l-transparent"
                         }`}>
                           <span className="w-8 text-sm text-muted-foreground font-mono">{i + 1}.</span>
                           <div className="flex-1 min-w-0">
@@ -335,9 +325,9 @@ const TeacherMonthlyTests = () => {
                           </div>
                           <Input type="number" min={0} max={100} placeholder="Mark" className="w-24"
                             value={mark} onChange={e => setMarks(prev => ({ ...prev, [s.user_id]: e.target.value }))} />
-                          {mark && (
-                            <span className={`px-2 py-1 rounded text-xs font-bold ${getMarkColor(Number(mark))}`}>
-                              {Number(mark) >= 75 ? "A" : Number(mark) >= 60 ? "B" : Number(mark) >= 50 ? "C" : Number(mark) >= 40 ? "D" : "F"}
+                          {grade && (
+                            <span className={`px-2 py-1 rounded text-xs font-bold ${getGradeColor(grade)}`}>
+                              {grade}
                             </span>
                           )}
                           {existing && (
@@ -364,6 +354,7 @@ const TeacherMonthlyTests = () => {
           <DialogContent className="max-w-sm">
             <DialogHeader><DialogTitle>Edit Mark</DialogTitle></DialogHeader>
             <Input type="number" min={0} max={100} value={editMark} onChange={e => setEditMark(e.target.value)} />
+            {editMark && <span className={`px-2 py-1 rounded text-xs font-bold self-start ${getGradeColor(getGrade(Number(editMark), gradingScales))}`}>{getGrade(Number(editMark), gradingScales)}</span>}
             <Button onClick={handleEditSave} className="w-full">Save</Button>
           </DialogContent>
         </Dialog>
