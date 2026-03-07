@@ -41,10 +41,18 @@ const TeacherAttendance = () => {
   useEffect(() => {
     if (!selectedClassId || !user) return;
     const fetchAttendance = async () => {
-      const { data: studentData } = await supabase.from("student_profiles")
-        .select("*, profiles!student_profiles_user_id_fkey(full_name)")
-        .eq("class_id", selectedClassId).eq("is_active", true);
-      setStudents(studentData || []);
+      const { data: spData } = await supabase.from("student_profiles")
+        .select("*").eq("class_id", selectedClassId).eq("is_active", true);
+      if (spData && spData.length > 0) {
+        const userIds = spData.map(s => s.user_id);
+        const { data: profilesData } = await supabase.from("profiles")
+          .select("user_id, full_name").in("user_id", userIds);
+        const profileMap: Record<string, any> = {};
+        (profilesData || []).forEach(p => { profileMap[p.user_id] = p; });
+        setStudents(spData.map(s => ({ ...s, profiles: profileMap[s.user_id] || null })));
+      } else {
+        setStudents([]);
+      }
 
       const { data: existingAtt } = await supabase.from("attendance").select("*")
         .eq("class_id", selectedClassId).eq("date", date);

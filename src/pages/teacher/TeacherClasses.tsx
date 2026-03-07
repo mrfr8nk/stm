@@ -40,10 +40,18 @@ const TeacherClasses = () => {
 
   useEffect(() => {
     if (!selectedClass) { setStudents([]); return; }
-    supabase.from("student_profiles")
-      .select("*, profiles!student_profiles_user_id_fkey(full_name, email, phone)")
-      .eq("class_id", selectedClass).eq("is_active", true)
-      .then(({ data }) => setStudents(data || []));
+    const fetchStudents = async () => {
+      const { data: spData } = await supabase.from("student_profiles")
+        .select("*").eq("class_id", selectedClass).eq("is_active", true);
+      if (!spData || spData.length === 0) { setStudents([]); return; }
+      const userIds = spData.map(s => s.user_id);
+      const { data: profilesData } = await supabase.from("profiles")
+        .select("user_id, full_name, email, phone").in("user_id", userIds);
+      const profileMap: Record<string, any> = {};
+      (profilesData || []).forEach(p => { profileMap[p.user_id] = p; });
+      setStudents(spData.map(s => ({ ...s, profiles: profileMap[s.user_id] || null })));
+    };
+    fetchStudents();
 
     // Get subjects taught in this class
     const subs = assignments.filter(a => a.class_id === selectedClass).map(a => a.subjects).filter(Boolean);
