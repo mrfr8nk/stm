@@ -318,6 +318,7 @@ export type Database = {
           notes: string | null
           payment_date: string | null
           payment_method: string | null
+          receipt_image_url: string | null
           receipt_number: string | null
           student_id: string
           term: Database["public"]["Enums"]["school_term"]
@@ -334,6 +335,7 @@ export type Database = {
           notes?: string | null
           payment_date?: string | null
           payment_method?: string | null
+          receipt_image_url?: string | null
           receipt_number?: string | null
           student_id: string
           term: Database["public"]["Enums"]["school_term"]
@@ -350,6 +352,7 @@ export type Database = {
           notes?: string | null
           payment_date?: string | null
           payment_method?: string | null
+          receipt_image_url?: string | null
           receipt_number?: string | null
           student_id?: string
           term?: Database["public"]["Enums"]["school_term"]
@@ -515,6 +518,7 @@ export type Database = {
           id: string
           notes: string | null
           payment_method: string | null
+          receipt_image_url: string | null
           receipt_reference: string | null
           recorded_by: string
         }
@@ -528,6 +532,7 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: string | null
+          receipt_image_url?: string | null
           receipt_reference?: string | null
           recorded_by: string
         }
@@ -541,6 +546,7 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: string | null
+          receipt_image_url?: string | null
           receipt_reference?: string | null
           recorded_by?: string
         }

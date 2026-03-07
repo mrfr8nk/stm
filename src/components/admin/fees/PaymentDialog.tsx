@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PAYMENT_METHODS, generateReceipt } from "./FeeConstants";
+import ReceiptImageUpload from "@/components/ReceiptImageUpload";
 
 interface Props {
   record: any | null;
@@ -20,6 +21,7 @@ const PaymentDialog = ({ record, open, onOpenChange, zigRate, getStudentName, on
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [method, setMethod] = useState("cash");
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
 
   if (!record) return null;
 
@@ -40,12 +42,14 @@ const PaymentDialog = ({ record, open, onOpenChange, zigRate, getStudentName, on
       receipt_number: receipt,
       payment_date: new Date().toISOString().split("T")[0],
       payment_method: method,
-    }).eq("id", record.id);
+      receipt_image_url: receiptImage,
+    } as any).eq("id", record.id);
 
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else {
       toast({ title: "Payment Recorded", description: `Receipt: ${receipt} — $${payUSD.toFixed(2)} paid` });
       setAmount("");
+      setReceiptImage(null);
       onOpenChange(false);
       onPaid();
     }
@@ -90,6 +94,12 @@ const PaymentDialog = ({ record, open, onOpenChange, zigRate, getStudentName, on
           <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm" value={method} onChange={(e) => setMethod(e.target.value)}>
             {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
+
+          <ReceiptImageUpload
+            value={receiptImage}
+            onChange={setReceiptImage}
+            folder="fee-payments"
+          />
 
           <Button className="w-full" onClick={handlePay}>Confirm Payment</Button>
         </div>

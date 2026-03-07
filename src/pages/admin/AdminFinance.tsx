@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { DollarSign, ShoppingCart, Plus, Trash2, Clock, TrendingDown, TrendingUp, Receipt } from "lucide-react";
+import { DollarSign, ShoppingCart, Plus, Trash2, Clock, TrendingDown, TrendingUp, Receipt, ZoomIn, Image } from "lucide-react";
+import ReceiptImageUpload from "@/components/ReceiptImageUpload";
 
 const PETTY_CASH_CATEGORIES = [
   "Stationery", "Cleaning Supplies", "Maintenance", "Transport", "Food & Beverages",
@@ -24,7 +25,8 @@ const AdminFinance = () => {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
-  const [newEntry, setNewEntry] = useState({ description: "", amount: "", category: "Stationery", payment_method: "cash", receipt_reference: "", date: new Date().toISOString().split("T")[0], notes: "" });
+  const [newEntry, setNewEntry] = useState({ description: "", amount: "", category: "Stationery", payment_method: "cash", receipt_reference: "", date: new Date().toISOString().split("T")[0], notes: "", receipt_image_url: "" });
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -60,13 +62,14 @@ const AdminFinance = () => {
       date: newEntry.date,
       notes: newEntry.notes || null,
       recorded_by: user?.id,
+      receipt_image_url: newEntry.receipt_image_url || null,
     } as any);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Petty Cash Entry Added" });
       setAddOpen(false);
-      setNewEntry({ description: "", amount: "", category: "Stationery", payment_method: "cash", receipt_reference: "", date: new Date().toISOString().split("T")[0], notes: "" });
+      setNewEntry({ description: "", amount: "", category: "Stationery", payment_method: "cash", receipt_reference: "", date: new Date().toISOString().split("T")[0], notes: "", receipt_image_url: "" });
       fetchData();
     }
   };
@@ -167,15 +170,15 @@ const AdminFinance = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Category</TableHead>
-                      <TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Ref</TableHead>
+                      <TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Ref</TableHead><TableHead>Proof</TableHead>
                       <TableHead>Recorded By</TableHead><TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loading ? (
-                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                     ) : pettyCash.length === 0 ? (
-                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No petty cash records yet.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No petty cash records yet.</TableCell></TableRow>
                     ) : pettyCash.map(p => (
                       <TableRow key={p.id}>
                         <TableCell className="text-sm">{new Date(p.date).toLocaleDateString()}</TableCell>
@@ -184,8 +187,14 @@ const AdminFinance = () => {
                         <TableCell className="text-destructive font-bold">${Number(p.amount).toFixed(2)}</TableCell>
                         <TableCell className="text-sm">{p.payment_method}</TableCell>
                         <TableCell className="text-xs font-mono">{p.receipt_reference || "—"}</TableCell>
+                        <TableCell>
+                          {p.receipt_image_url ? (
+                            <button onClick={() => setViewingImage(p.receipt_image_url)} className="group">
+                              <img src={p.receipt_image_url} alt="Proof" className="w-10 h-10 rounded object-cover border border-border group-hover:ring-2 ring-primary transition-all" />
+                            </button>
+                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                        </TableCell>
                         <TableCell className="text-sm">{getName(p.recorded_by)}</TableCell>
-                        <TableCell><Button variant="ghost" size="sm" onClick={() => handleDeletePetty(p.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button></TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -247,8 +256,20 @@ const AdminFinance = () => {
                 <Input placeholder="Optional" value={newEntry.receipt_reference} onChange={e => setNewEntry({ ...newEntry, receipt_reference: e.target.value })} /></div>
               <div><label className="text-xs font-medium text-muted-foreground">Notes</label>
                 <Input placeholder="Optional notes" value={newEntry.notes} onChange={e => setNewEntry({ ...newEntry, notes: e.target.value })} /></div>
+              <ReceiptImageUpload
+                value={newEntry.receipt_image_url || null}
+                onChange={(url) => setNewEntry({ ...newEntry, receipt_image_url: url || "" })}
+                folder="petty-cash"
+              />
               <Button className="w-full" onClick={handleAddPettyCash}><Plus className="w-4 h-4 mr-2" /> Add Entry</Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Image preview dialog */}
+        <Dialog open={!!viewingImage} onOpenChange={() => setViewingImage(null)}>
+          <DialogContent className="max-w-2xl p-2">
+            {viewingImage && <img src={viewingImage} alt="Receipt proof" className="w-full rounded-lg" />}
           </DialogContent>
         </Dialog>
       </div>
