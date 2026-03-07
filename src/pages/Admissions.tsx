@@ -1,8 +1,13 @@
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { CheckCircle, FileText, Calendar, DollarSign, Users, BookOpen, Award } from "lucide-react";
+import { CheckCircle, FileText, Calendar, DollarSign, Users, BookOpen, Award, Send, Loader2 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
-import { Link } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const requirements = [
   "Completed application form",
@@ -37,6 +42,68 @@ const timeline = [
 ];
 
 const Admissions = () => {
+  const { toast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    date_of_birth: "",
+    level: "o_level" as "zjc" | "o_level" | "a_level",
+    form: 1,
+    guardian_name: "",
+    guardian_phone: "",
+    guardian_email: "",
+    previous_school: "",
+    address: "",
+    notes: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm(prev => ({
+      ...prev,
+      [name]: name === "form" ? parseInt(value) : value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.full_name || !form.email) {
+      toast({ title: "Required Fields", description: "Please fill in your full name and email.", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase.from("applications").insert({
+      full_name: form.full_name,
+      email: form.email,
+      phone: form.phone || null,
+      date_of_birth: form.date_of_birth || null,
+      level: form.level,
+      form: form.form,
+      guardian_name: form.guardian_name || null,
+      guardian_phone: form.guardian_phone || null,
+      guardian_email: form.guardian_email || null,
+      previous_school: form.previous_school || null,
+      address: form.address || null,
+      notes: form.notes || null,
+    });
+    setSubmitting(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setSubmitted(true);
+      toast({ title: "Application Submitted!", description: "We will review your application and get back to you." });
+    }
+  };
+
+  const getFormsForLevel = () => {
+    if (form.level === "zjc") return [1, 2];
+    if (form.level === "o_level") return [1, 2, 3, 4];
+    return [5, 6];
+  };
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -79,8 +146,118 @@ const Admissions = () => {
         </div>
       </section>
 
+      {/* Online Application Form */}
+      <section className="py-16 bg-muted" id="apply">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <div className="text-center mb-12">
+            <h2 className="font-display text-3xl font-bold text-foreground mb-4">Online Application</h2>
+            <div className="w-16 h-1 bg-secondary mx-auto rounded-full" />
+            <p className="text-muted-foreground mt-4">Fill out the form below to apply for admission.</p>
+          </div>
+
+          {submitted ? (
+            <Card className="text-center py-12">
+              <CardContent>
+                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                <h3 className="font-display text-2xl font-bold text-foreground mb-2">Application Submitted!</h3>
+                <p className="text-muted-foreground mb-6">Thank you for applying to St. Mary's. We will review your application and contact you via email.</p>
+                <Button onClick={() => { setSubmitted(false); setForm({ full_name: "", email: "", phone: "", date_of_birth: "", level: "o_level", form: 1, guardian_name: "", guardian_phone: "", guardian_email: "", previous_school: "", address: "", notes: "" }); }}>
+                  Submit Another Application
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5" /> Application Form</CardTitle></CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Student Information */}
+                  <div>
+                    <h3 className="font-display font-bold text-foreground mb-3">Student Information</h3>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Full Name *</label>
+                        <Input name="full_name" value={form.full_name} onChange={handleChange} placeholder="Enter full name" required />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Email Address *</label>
+                        <Input name="email" type="email" value={form.email} onChange={handleChange} placeholder="email@example.com" required />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Phone Number</label>
+                        <Input name="phone" value={form.phone} onChange={handleChange} placeholder="+263 7X XXX XXXX" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Date of Birth</label>
+                        <Input name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Level</label>
+                        <select name="level" value={form.level} onChange={e => { handleChange(e); const l = e.target.value; setForm(prev => ({ ...prev, level: l as any, form: l === "a_level" ? 5 : 1 })); }} className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm">
+                          <option value="zjc">ZJC</option>
+                          <option value="o_level">O Level</option>
+                          <option value="a_level">A Level</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Form</label>
+                        <select name="form" value={form.form} onChange={handleChange} className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm">
+                          {getFormsForLevel().map(f => <option key={f} value={f}>Form {f}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Guardian Information */}
+                  <div>
+                    <h3 className="font-display font-bold text-foreground mb-3">Guardian / Parent Information</h3>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Guardian Name</label>
+                        <Input name="guardian_name" value={form.guardian_name} onChange={handleChange} placeholder="Full name" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Guardian Phone</label>
+                        <Input name="guardian_phone" value={form.guardian_phone} onChange={handleChange} placeholder="+263 7X XXX XXXX" />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-sm font-medium text-foreground mb-1 block">Guardian Email</label>
+                        <Input name="guardian_email" type="email" value={form.guardian_email} onChange={handleChange} placeholder="guardian@example.com" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Info */}
+                  <div>
+                    <h3 className="font-display font-bold text-foreground mb-3">Additional Information</h3>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Previous School</label>
+                        <Input name="previous_school" value={form.previous_school} onChange={handleChange} placeholder="Name of previous school" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Home Address</label>
+                        <Input name="address" value={form.address} onChange={handleChange} placeholder="Full address" />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-sm font-medium text-foreground mb-1 block">Additional Notes</label>
+                        <textarea name="notes" value={form.notes} onChange={handleChange} placeholder="Any additional information..." rows={3} className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm resize-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                    {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting...</> : <><Send className="w-4 h-4 mr-2" /> Submit Application</>}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </section>
+
       {/* Pass Rates */}
-      <section className="py-16 bg-muted">
+      <section className="py-16 bg-background">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-12">
             <h2 className="font-display text-3xl font-bold text-foreground mb-4">Our Pass Rates</h2>
@@ -120,7 +297,7 @@ const Admissions = () => {
       </section>
 
       {/* Requirements */}
-      <section className="py-16 bg-background">
+      <section className="py-16 bg-muted">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-12">
             <h2 className="font-display text-3xl font-bold text-foreground mb-4">Admission Requirements</h2>
@@ -140,7 +317,7 @@ const Admissions = () => {
       </section>
 
       {/* Fee Structure */}
-      <section className="py-16 bg-muted">
+      <section className="py-16 bg-background">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-12">
             <h2 className="font-display text-3xl font-bold text-foreground mb-4">Fee Structure (Per Term)</h2>
@@ -177,7 +354,7 @@ const Admissions = () => {
       </section>
 
       {/* Application Timeline */}
-      <section className="py-16 bg-background">
+      <section className="py-16 bg-muted">
         <div className="container mx-auto px-4 max-w-3xl">
           <div className="text-center mb-12">
             <h2 className="font-display text-3xl font-bold text-foreground mb-4">Application Timeline</h2>
@@ -197,27 +374,6 @@ const Admissions = () => {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="relative py-20 overflow-hidden">
-        <div className="absolute inset-0">
-          <img src={heroBg} alt="" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-cta" />
-        </div>
-        <div className="relative z-10 container mx-auto px-4 text-center">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground mb-4">Ready to Apply?</h2>
-          <p className="font-body text-primary-foreground/80 mb-8 max-w-lg mx-auto">
-            Take the first step towards excellence. Contact us to begin your application process.
-          </p>
-          <Link
-            to="/contact"
-            className="inline-flex items-center gap-2 bg-secondary text-secondary-foreground px-8 py-4 rounded-xl font-body font-bold text-lg hover:opacity-90 transition-all hover:-translate-y-1 shadow-lg"
-          >
-            <FileText className="w-5 h-5" />
-            Contact Us to Apply
-          </Link>
         </div>
       </section>
 

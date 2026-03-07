@@ -7,15 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, Plus, Trash2, Edit, RotateCcw, Search, Info } from "lucide-react";
+import { GraduationCap, Plus, Trash2, Edit, RotateCcw, Search, Info, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
-// Class naming conventions
 const ZJC_OLEVEL_STREAMS = ["G", "W", "E", "Z", "U", "A", "B"];
 const ALEVEL_CLASSES = ["A", "B"];
 const ALEVEL_STREAMS = ["Sciences", "Commercials", "Arts"];
+const MAX_CLASSES_PER_TEACHER = 5;
 
 const AdminClasses = () => {
   const { user } = useAuth();
@@ -29,7 +29,6 @@ const AdminClasses = () => {
   const [editClass, setEditClass] = useState<any>(null);
   const [editOpen, setEditOpen] = useState(false);
 
-  // Quick add form
   const [quickLevel, setQuickLevel] = useState("o_level");
   const [quickForm, setQuickForm] = useState("1");
   const [quickStream, setQuickStream] = useState("");
@@ -39,6 +38,12 @@ const AdminClasses = () => {
   const [assignTeacher, setAssignTeacher] = useState("");
   const [assignSubject, setAssignSubject] = useState("");
   const [assignClass, setAssignClass] = useState("");
+  const [assignType, setAssignType] = useState<"subject" | "class_teacher">("subject");
+
+  // Custom subject
+  const [showAddSubject, setShowAddSubject] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState("");
+  const [newSubjectCode, setNewSubjectCode] = useState("");
 
   const fetchData = async () => {
     const [classRes, profilesRes, rolesRes, assignRes, subRes] = await Promise.all([
@@ -59,13 +64,9 @@ const AdminClasses = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Auto-generate class name
   const getAutoName = () => {
     if (customName.trim()) return customName.trim();
     const formNum = parseInt(quickForm);
-    if (quickLevel === "a_level") {
-      return `Form ${formNum}${quickStream ? ` ${quickStream}` : ""}`;
-    }
     return `Form ${formNum}${quickStream ? ` ${quickStream}` : ""}`;
   };
 
@@ -85,8 +86,7 @@ const AdminClasses = () => {
       ? `Form ${form} Class ${stream.split(" - ")[0]} ${stream.split(" - ")[1] || ""}`
       : `Form ${form} ${stream}`;
     const { error } = await supabase.from("classes").insert({
-      name: name.trim(), form, level: level as any,
-      stream: stream || null,
+      name: name.trim(), form, level: level as any, stream: stream || null,
     });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "Class Added", description: name }); fetchData(); }
@@ -113,8 +113,40 @@ const AdminClasses = () => {
     else { toast({ title: "Class Updated" }); setEditOpen(false); fetchData(); }
   };
 
+  // Count how many classes a teacher is assigned to (unique class_ids)
+  const getTeacherClassCount = (teacherId: string) => {
+    const classIds = new Set(assignments.filter(a => a.teacher_id === teacherId).map(a => a.class_id));
+    // Also count classes where they're class teacher
+    classes.filter(c => c.class_teacher_id === teacherId).forEach(c => classIds.add(c.id));
+    return classIds.size;
+  };
+
   const handleAssign = async () => {
-    if (!assignTeacher || !assignSubject || !assignClass) return;
+    if (!assignTeacher || !assignClass) return;
+
+    if (assignType === "class_teacher") {
+      // Assign as class teacher only
+      const count = getTeacherClassCount(assignTeacher);
+      if (count >= MAX_CLASSES_PER_TEACHER) {
+        toast({ title: "Limit Reached", description: `This teacher already has ${count} classes (max ${MAX_CLASSES_PER_TEACHER}).`, variant: "destructive" });
+        return;
+      }
+      const { error } = await supabase.from("classes").update({ class_teacher_id: assignTeacher }).eq("id", assignClass);
+      if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+      else { toast({ title: "Class Teacher Assigned" }); setAssignTeacher(""); setAssignClass(""); fetchData(); }
+      return;
+    }
+
+    if (!assignSubject) return;
+    const count = getTeacherClassCount(assignTeacher);
+    // Check if this is a new class for the teacher
+    const existingClassIds = new Set(assignments.filter(a => a.teacher_id === assignTeacher).map(a => a.class_id));
+    classes.filter(c => c.class_teacher_id === assignTeacher).forEach(c => existingClassIds.add(c.id));
+    if (!existingClassIds.has(assignClass) && existingClassIds.size >= MAX_CLASSES_PER_TEACHER) {
+      toast({ title: "Limit Reached", description: `This teacher already has ${existingClassIds.size} classes (max ${MAX_CLASSES_PER_TEACHER}).`, variant: "destructive" });
+      return;
+    }
+
     const { error } = await supabase.from("teacher_assignments").insert({
       teacher_id: assignTeacher, subject_id: assignSubject, class_id: assignClass,
     });
@@ -127,19 +159,30 @@ const AdminClasses = () => {
     toast({ title: "Assignment Removed" }); fetchData();
   };
 
+  const handleAddSubject = async () => {
+    if (!newSubjectName.trim()) return;
+    const { error } = await supabase.from("subjects").insert({
+      name: newSubjectName.trim(), code: newSubjectCode.trim() || null,
+    });
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else {
+      toast({ title: "Subject Added", description: newSubjectName });
+      setNewSubjectName(""); setNewSubjectCode(""); setShowAddSubject(false);
+      fetchData();
+    }
+  };
+
   const getTeacherName = (id: string) => teachers.find(t => t.user_id === id)?.full_name || "—";
   const getClassName = (id: string) => classes.find(c => c.id === id)?.name || "—";
   const getSubjectName = (id: string) => subjects.find(s => s.id === id)?.name || "—";
 
   const filteredClasses = classes.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
-  // Get available streams based on level
   const getStreamsForLevel = () => {
     if (quickLevel === "a_level") return ALEVEL_CLASSES;
     return ZJC_OLEVEL_STREAMS;
   };
 
-  // Get forms for level
   const getFormsForLevel = () => {
     if (quickLevel === "zjc") return [1, 2];
     if (quickLevel === "o_level") return [1, 2, 3, 4];
@@ -159,7 +202,8 @@ const AdminClasses = () => {
               <div className="text-sm text-muted-foreground">
                 <p className="font-medium text-foreground mb-1">Class Naming Convention</p>
                 <p><strong>ZJC & O Level:</strong> Form 1-4 with streams G, W, E, Z, U, A (non-formal), B (non-formal) — e.g. <Badge variant="outline">Form 1 G</Badge> <Badge variant="outline">Form 3 W</Badge></p>
-                <p className="mt-1"><strong>A Level:</strong> Form 5-6, Class A or B with specialization — e.g. <Badge variant="outline">Form 5 Class A Sciences</Badge> <Badge variant="outline">Form 6 Class B Commercials</Badge></p>
+                <p className="mt-1"><strong>A Level:</strong> Form 5-6, Class A or B with specialization — e.g. <Badge variant="outline">Form 5 Class A Sciences</Badge></p>
+                <p className="mt-1"><strong>Teacher Limit:</strong> Each teacher can be assigned to a maximum of <Badge variant="secondary">{MAX_CLASSES_PER_TEACHER} classes</Badge></p>
               </div>
             </div>
           </CardContent>
@@ -192,7 +236,6 @@ const AdminClasses = () => {
               <Button onClick={handleAdd}><Plus className="w-4 h-4 mr-1" /> Add</Button>
             </div>
 
-            {/* Quick Add Buttons */}
             <div>
               <p className="text-xs text-muted-foreground mb-2">Quick Add — {quickLevel === "zjc" ? "ZJC" : quickLevel === "o_level" ? "O Level" : "A Level"} Form {quickForm}:</p>
               <div className="flex flex-wrap gap-2">
@@ -261,23 +304,59 @@ const AdminClasses = () => {
 
           <TabsContent value="assignments">
             <Card>
-              <CardHeader><CardTitle>Assign Teacher to Class & Subject</CardTitle></CardHeader>
-              <CardContent className="flex flex-wrap gap-3 mb-4">
-                <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm flex-1 min-w-[150px]" value={assignTeacher} onChange={e => setAssignTeacher(e.target.value)}>
-                  <option value="">Select Teacher...</option>
-                  {teachers.map(t => <option key={t.user_id} value={t.user_id}>{t.full_name}</option>)}
-                </select>
-                <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm flex-1 min-w-[150px]" value={assignClass} onChange={e => setAssignClass(e.target.value)}>
-                  <option value="">Select Class...</option>
-                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm flex-1 min-w-[150px]" value={assignSubject} onChange={e => setAssignSubject(e.target.value)}>
-                  <option value="">Select Subject...</option>
-                  {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <Button onClick={handleAssign}><Plus className="w-4 h-4 mr-1" /> Assign</Button>
+              <CardHeader><CardTitle>Assign Teacher to Class</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {/* Assignment type toggle */}
+                <div className="flex gap-2">
+                  <Button variant={assignType === "subject" ? "default" : "outline"} size="sm" onClick={() => setAssignType("subject")}>
+                    Subject Teacher
+                  </Button>
+                  <Button variant={assignType === "class_teacher" ? "default" : "outline"} size="sm" onClick={() => setAssignType("class_teacher")}>
+                    Class Teacher Only
+                  </Button>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm flex-1 min-w-[150px]" value={assignTeacher} onChange={e => setAssignTeacher(e.target.value)}>
+                    <option value="">Select Teacher...</option>
+                    {teachers.map(t => {
+                      const count = getTeacherClassCount(t.user_id);
+                      return (
+                        <option key={t.user_id} value={t.user_id}>
+                          {t.full_name} ({count}/{MAX_CLASSES_PER_TEACHER} classes)
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm flex-1 min-w-[150px]" value={assignClass} onChange={e => setAssignClass(e.target.value)}>
+                    <option value="">Select Class...</option>
+                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  {assignType === "subject" && (
+                    <div className="flex gap-2 flex-1 min-w-[150px]">
+                      <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm flex-1" value={assignSubject} onChange={e => setAssignSubject(e.target.value)}>
+                        <option value="">Select Subject...</option>
+                        {subjects.filter(s => !s.deleted_at).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                      <Button variant="outline" size="icon" onClick={() => setShowAddSubject(true)} title="Add new subject">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                  <Button onClick={handleAssign}>
+                    <Plus className="w-4 h-4 mr-1" /> {assignType === "class_teacher" ? "Set Class Teacher" : "Assign"}
+                  </Button>
+                </div>
+
+                {assignTeacher && getTeacherClassCount(assignTeacher) >= MAX_CLASSES_PER_TEACHER && (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertTriangle className="w-4 h-4" />
+                    This teacher has reached the maximum of {MAX_CLASSES_PER_TEACHER} classes.
+                  </div>
+                )}
               </CardContent>
             </Card>
+
             <Card className="mt-4">
               <CardContent className="p-0">
                 <Table>
@@ -290,6 +369,21 @@ const AdminClasses = () => {
                         <TableCell>{getSubjectName(a.subject_id)}</TableCell>
                         <TableCell>{a.academic_year}</TableCell>
                         <TableCell><Button variant="ghost" size="sm" onClick={() => handleRemoveAssignment(a.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button></TableCell>
+                      </TableRow>
+                    ))}
+                    {/* Show class teacher assignments */}
+                    {classes.filter(c => c.class_teacher_id).map(c => (
+                      <TableRow key={`ct-${c.id}`} className="bg-muted/30">
+                        <TableCell className="font-medium">{getTeacherName(c.class_teacher_id)}</TableCell>
+                        <TableCell>{c.name}</TableCell>
+                        <TableCell><Badge variant="outline">Class Teacher</Badge></TableCell>
+                        <TableCell>{c.academic_year}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" onClick={async () => {
+                            await supabase.from("classes").update({ class_teacher_id: null }).eq("id", c.id);
+                            toast({ title: "Class Teacher Removed" }); fetchData();
+                          }}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -342,6 +436,18 @@ const AdminClasses = () => {
                 <Button className="w-full" onClick={handleEdit}>Save Changes</Button>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Subject Dialog */}
+        <Dialog open={showAddSubject} onOpenChange={setShowAddSubject}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Add New Subject</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <Input placeholder="Subject Name *" value={newSubjectName} onChange={e => setNewSubjectName(e.target.value)} />
+              <Input placeholder="Subject Code (optional)" value={newSubjectCode} onChange={e => setNewSubjectCode(e.target.value)} />
+              <Button className="w-full" onClick={handleAddSubject}>Add Subject</Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
