@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, RotateCcw, FileDown, BarChart3, UserSearch, BookOpen, ClipboardCheck, DollarSign, Heart, Shield, X, ScanLine } from "lucide-react";
+import { Search, RotateCcw, FileDown, BarChart3, UserSearch, BookOpen, ClipboardCheck, DollarSign, Heart, Shield, X, ScanLine, GraduationCap, Plus, Trash2, Calendar } from "lucide-react";
 import BarcodeScanner from "@/components/admin/fees/BarcodeScanner";
 
 import FeeStructureCard from "@/components/admin/fees/FeeStructureCard";
@@ -37,6 +37,9 @@ const AdminFees = () => {
   const [showCharts, setShowCharts] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
 
+  // Scholarships
+  const [scholarships, setScholarships] = useState<any[]>([]);
+  const [scholarshipForm, setScholarshipForm] = useState({ student_id: "", organization_name: "", coverage_type: "full", coverage_percentage: "100", end_date: "", notes: "" });
   // Payment dialog
   const [payRecord, setPayRecord] = useState<any>(null);
   const [payOpen, setPayOpen] = useState(false);
@@ -56,7 +59,7 @@ const AdminFees = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const [feeRes, profilesRes, rolesRes, sessionsRes, spRes, subjectsRes, classesRes] = await Promise.all([
+    const [feeRes, profilesRes, rolesRes, sessionsRes, spRes, subjectsRes, classesRes, scholarshipRes] = await Promise.all([
       supabase.from("fee_records").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*"),
       supabase.from("user_roles").select("*").eq("role", "student"),
@@ -64,6 +67,7 @@ const AdminFees = () => {
       supabase.from("student_profiles").select("*"),
       supabase.from("subjects").select("*").is("deleted_at", null),
       supabase.from("classes").select("*").is("deleted_at", null),
+      supabase.from("scholarships").select("*").order("created_at", { ascending: false }),
     ]);
     const profiles = profilesRes.data || [];
     const studentIds = new Set((rolesRes.data || []).map((r: any) => r.user_id));
@@ -75,6 +79,7 @@ const AdminFees = () => {
     setDeletedFees(all.filter((f: any) => f.deleted_at));
     setSessions(sessionsRes.data || []);
     setSubjects(subjectsRes.data || []);
+    setScholarships(scholarshipRes.data || []);
     setLoading(false);
   };
 
