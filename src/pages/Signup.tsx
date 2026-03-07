@@ -358,6 +358,14 @@ const Signup = () => {
                         </div>
                         <StudentPersonalFields />
                         <div>
+                          <label className="text-sm font-medium text-foreground">Class</label>
+                          <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+                            <option value="">Select class...</option>
+                            {filteredClasses.map(c => <option key={c.id} value={c.id}>{c.name}{c.stream ? ` (${c.stream})` : ""}</option>)}
+                          </select>
+                          {filteredClasses.length === 0 && <p className="text-xs text-muted-foreground mt-1">No classes available for this level/form.</p>}
+                        </div>
+                        <div>
                           <label className="text-sm font-medium text-foreground">Previous School</label>
                           <Input placeholder="Name of previous school" value={previousSchool} onChange={e => setPreviousSchool(e.target.value)} />
                         </div>
