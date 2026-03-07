@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, RotateCcw, FileDown, BarChart3, UserSearch, BookOpen, ClipboardCheck, DollarSign, Heart, Shield, X, ScanLine, GraduationCap, Plus, Trash2, Calendar } from "lucide-react";
+import { Search, RotateCcw, BarChart3, UserSearch, BookOpen, ClipboardCheck, DollarSign, Heart, Shield, X, ScanLine, GraduationCap, Plus, Trash2, Calendar } from "lucide-react";
+import ExportDropdown from "@/components/ExportDropdown";
 import BarcodeScanner from "@/components/admin/fees/BarcodeScanner";
 
 import FeeStructureCard from "@/components/admin/fees/FeeStructureCard";
@@ -198,34 +199,22 @@ const AdminFees = () => {
 
   const activeScholarships = scholarships.filter(s => s.is_active);
 
-  const exportScholarshipsCSV = () => {
-    const headers = ["Student Name", "Student ID", "Organization", "Coverage Type", "Coverage %", "Start Date", "End Date", "Status", "Notes"];
-    const rows = scholarships.map(s => {
-      const sp = studentProfiles.find((p: any) => p.user_id === s.student_id);
-      const isExpired = s.end_date && new Date(s.end_date) < new Date();
-      const status = s.is_active && !isExpired ? "Active" : isExpired ? "Expired" : "Inactive";
-      return [
-        `"${getStudentName(s.student_id)}"`,
-        sp?.student_id || "",
-        `"${s.organization_name}"`,
-        s.coverage_type,
-        s.coverage_percentage,
-        s.start_date,
-        s.end_date || "No end date",
-        status,
-        `"${(s.notes || "").replace(/"/g, '""')}"`,
-      ].join(",");
-    });
-    const csv = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `scholarships_report_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast({ title: "Exported", description: `${scholarships.length} scholarship records exported to CSV.` });
-  };
+  const scholarshipExportRows = scholarships.map(s => {
+    const sp = studentProfiles.find((p: any) => p.user_id === s.student_id);
+    const isExpired = s.end_date && new Date(s.end_date) < new Date();
+    const status = s.is_active && !isExpired ? "Active" : isExpired ? "Expired" : "Inactive";
+    return [
+      getStudentName(s.student_id),
+      sp?.student_id || "",
+      s.organization_name,
+      s.coverage_type,
+      s.coverage_percentage,
+      s.start_date,
+      s.end_date || "No end date",
+      status,
+      s.notes || "",
+    ] as (string | number | null | undefined)[];
+  });
 
   return (
     <DashboardLayout role="admin">
