@@ -18,16 +18,44 @@ const portalConfig: Record<PortalType, { label: string; icon: React.ElementType;
 
 const Login = () => {
   const [selectedPortal, setSelectedPortal] = useState<PortalType | null>(null);
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const resolveEmail = async (input: string): Promise<string | null> => {
+    const trimmed = input.trim();
+    // If it looks like a student ID (e.g. STM20260001), look up the email
+    if (/^STM\d+$/i.test(trimmed)) {
+      const { data: sp } = await supabase
+        .from("student_profiles")
+        .select("user_id")
+        .ilike("student_id", trimmed)
+        .limit(1)
+        .single();
+      if (!sp) return null;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("user_id", sp.user_id)
+        .single();
+      return profile?.email || null;
+    }
+    return trimmed;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPortal) return;
     setLoading(true);
+
+    const email = await resolveEmail(loginId);
+    if (!email) {
+      toast({ title: "Login Failed", description: "Student ID not found. Please check and try again.", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
@@ -36,7 +64,6 @@ const Login = () => {
       return;
     }
 
-    // Verify role matches selected portal
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
@@ -132,12 +159,14 @@ const Login = () => {
               <CardContent>
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground">Email</label>
+                    <label className="text-sm font-medium text-foreground">
+                      {selectedPortal === "student" ? "Email or Student ID" : "Email"}
+                    </label>
                     <Input
-                      type="email"
-                      placeholder="your.email@stmaryshigh.edu.zw"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      type="text"
+                      placeholder={selectedPortal === "student" ? "email or STM20260001" : "your.email@stmaryshigh.edu.zw"}
+                      value={loginId}
+                      onChange={(e) => setLoginId(e.target.value)}
                       required
                       autoFocus
                     />
