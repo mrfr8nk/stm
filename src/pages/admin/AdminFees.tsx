@@ -39,6 +39,8 @@ const AdminFees = () => {
 
   // Scholarships
   const [scholarships, setScholarships] = useState<any[]>([]);
+  const [scholarshipSearch, setScholarshipSearch] = useState("");
+  const [scholarshipStudentSearch, setScholarshipStudentSearch] = useState("");
   const [scholarshipForm, setScholarshipForm] = useState({ student_id: "", organization_name: "", coverage_type: "full", coverage_percentage: "100", end_date: "", notes: "" });
   // Payment dialog
   const [payRecord, setPayRecord] = useState<any>(null);
@@ -330,12 +332,44 @@ const AdminFees = () => {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div>
+                    <div className="relative">
                       <label className="text-xs text-muted-foreground">Student</label>
-                      <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm" value={scholarshipForm.student_id} onChange={e => setScholarshipForm({ ...scholarshipForm, student_id: e.target.value })}>
-                        <option value="">Select Student...</option>
-                        {students.map(s => <option key={s.user_id} value={s.user_id}>{s.full_name}</option>)}
-                      </select>
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                        <Input
+                          className="pl-8 text-sm"
+                          placeholder="Search by name or ID..."
+                          value={scholarshipStudentSearch}
+                          onChange={e => { setScholarshipStudentSearch(e.target.value); if (!e.target.value) setScholarshipForm({ ...scholarshipForm, student_id: "" }); }}
+                        />
+                      </div>
+                      {scholarshipStudentSearch.trim().length > 0 && !scholarshipForm.student_id && (
+                        <div className="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto border rounded-md bg-popover shadow-md">
+                          {students.filter(s => {
+                            const sp = studentProfiles.find((p: any) => p.user_id === s.user_id);
+                            const q = scholarshipStudentSearch.toLowerCase();
+                            return (s.full_name || "").toLowerCase().includes(q) || (sp?.student_id || "").toLowerCase().includes(q);
+                          }).slice(0, 8).map(s => {
+                            const sp = studentProfiles.find((p: any) => p.user_id === s.user_id);
+                            return (
+                              <div key={s.user_id} className="p-2 hover:bg-accent/50 cursor-pointer text-sm flex justify-between" onClick={() => { setScholarshipForm({ ...scholarshipForm, student_id: s.user_id }); setScholarshipStudentSearch(s.full_name + (sp?.student_id ? ` (${sp.student_id})` : "")); }}>
+                                <span>{s.full_name}</span>
+                                {sp?.student_id && <span className="text-xs text-muted-foreground">{sp.student_id}</span>}
+                              </div>
+                            );
+                          })}
+                          {students.filter(s => {
+                            const sp = studentProfiles.find((p: any) => p.user_id === s.user_id);
+                            const q = scholarshipStudentSearch.toLowerCase();
+                            return (s.full_name || "").toLowerCase().includes(q) || (sp?.student_id || "").toLowerCase().includes(q);
+                          }).length === 0 && <p className="text-xs text-muted-foreground text-center py-3">No students found</p>}
+                        </div>
+                      )}
+                      {scholarshipForm.student_id && (
+                        <button type="button" className="absolute right-2 top-8 text-muted-foreground hover:text-foreground" onClick={() => { setScholarshipForm({ ...scholarshipForm, student_id: "" }); setScholarshipStudentSearch(""); }}>
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground">Organization</label>
@@ -371,6 +405,15 @@ const AdminFees = () => {
 
               {/* Scholarships Table */}
               <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-lg flex-1">All Scholarships</CardTitle>
+                    <div className="relative w-64">
+                      <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                      <Input className="pl-8 h-9 text-sm" placeholder="Filter by student or org..." value={scholarshipSearch} onChange={e => setScholarshipSearch(e.target.value)} />
+                    </div>
+                  </div>
+                </CardHeader>
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader>
@@ -384,9 +427,16 @@ const AdminFees = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {scholarships.length === 0 ? (
-                        <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No scholarships configured.</TableCell></TableRow>
-                      ) : scholarships.map(s => {
+                      {(() => {
+                        const sq = scholarshipSearch.toLowerCase();
+                        const filteredScholarships = scholarships.filter(s => {
+                          if (!sq) return true;
+                          const name = getStudentName(s.student_id).toLowerCase();
+                          return name.includes(sq) || (s.organization_name || "").toLowerCase().includes(sq);
+                        });
+                        return filteredScholarships.length === 0 ? (
+                          <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{sq ? "No matching scholarships." : "No scholarships configured."}</TableCell></TableRow>
+                        ) : filteredScholarships.map(s => {
                         const isExpired = s.end_date && new Date(s.end_date) < new Date();
                         return (
                           <TableRow key={s.id} className={!s.is_active ? "opacity-50" : ""}>
@@ -428,7 +478,8 @@ const AdminFees = () => {
                             </TableCell>
                           </TableRow>
                         );
-                      })}
+                      });
+                      })()}
                     </TableBody>
                   </Table>
                 </CardContent>
