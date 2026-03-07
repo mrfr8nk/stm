@@ -58,10 +58,17 @@ const Signup = () => {
     setLoading(true);
 
     const { data: codeData, error: codeError } = await supabase
-      .from("access_codes").select("*").eq("code", accessCode.trim()).eq("used", false).single();
+      .from("access_codes").select("*").eq("code", accessCode.trim()).is("deleted_at", null).single();
 
     if (codeError || !codeData) {
       toast({ title: "Invalid Access Code", description: "The code is invalid, expired, or already used.", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+    const useCount = (codeData as any).use_count ?? (codeData.used ? 1 : 0);
+    const maxUses = (codeData as any).max_uses ?? 1;
+    if (useCount >= maxUses) {
+      toast({ title: "Code Fully Used", description: "This access code has reached its usage limit.", variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -88,7 +95,12 @@ const Signup = () => {
     }
 
     await supabase.from("user_roles").insert({ user_id: authData.user.id, role: codeData.role });
-    await supabase.from("access_codes").update({ used: true, used_by: authData.user.id }).eq("id", codeData.id);
+    const newUseCount = useCount + 1;
+    await supabase.from("access_codes").update({
+      used: newUseCount >= maxUses,
+      used_by: authData.user.id,
+      use_count: newUseCount,
+    } as any).eq("id", codeData.id);
 
     if (codeData.role === "teacher") {
       await supabase.from("teacher_profiles").insert({ user_id: authData.user.id });
