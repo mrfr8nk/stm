@@ -39,6 +39,8 @@ const AdminFees = () => {
 
   // Scholarships
   const [scholarships, setScholarships] = useState<any[]>([]);
+  const [scholarshipSearch, setScholarshipSearch] = useState("");
+  const [scholarshipStudentSearch, setScholarshipStudentSearch] = useState("");
   const [scholarshipForm, setScholarshipForm] = useState({ student_id: "", organization_name: "", coverage_type: "full", coverage_percentage: "100", end_date: "", notes: "" });
   // Payment dialog
   const [payRecord, setPayRecord] = useState<any>(null);
