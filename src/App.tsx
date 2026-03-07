@@ -38,6 +38,7 @@ import StudentReports from "./pages/student/StudentReports";
 import StudentAnnouncements from "./pages/student/StudentAnnouncements";
 import StudentFees from "./pages/student/StudentFees";
 import StudentProfile from "./pages/student/StudentProfile";
+import StudentStudyPal from "./pages/student/StudentStudyPal";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
