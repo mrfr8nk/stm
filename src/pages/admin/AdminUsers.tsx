@@ -131,6 +131,7 @@ const AdminUsers = () => {
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-12"></TableHead>
           <SortHeader field="full_name">Name</SortHeader>
           <TableHead>Email</TableHead>
           <TableHead>Phone</TableHead>
@@ -141,11 +142,20 @@ const AdminUsers = () => {
       </TableHeader>
       <TableBody>
         {loading ? (
-          <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+          <TableRow><TableCell colSpan={showRole ? 7 : 6} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
         ) : sorted(data).length === 0 ? (
-          <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No users found.</TableCell></TableRow>
+          <TableRow><TableCell colSpan={showRole ? 7 : 6} className="text-center py-8 text-muted-foreground">No users found.</TableCell></TableRow>
         ) : sorted(data).map(u => (
           <TableRow key={u.id} className={u.studentProfile?.is_active === false ? "opacity-50 bg-destructive/5" : ""}>
+            <TableCell>
+              {u.avatar_url ? (
+                <img src={u.avatar_url} alt={u.full_name} className="w-8 h-8 rounded-full object-cover border border-border" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                  {(u.full_name || "U").charAt(0)}
+                </div>
+              )}
+            </TableCell>
             <TableCell className="font-medium">
               {u.full_name}
               {u.studentProfile?.is_active === false && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-destructive/10 text-destructive font-medium">TRANSFERRED</span>}
@@ -221,9 +231,13 @@ const AdminUsers = () => {
             {selectedUser && (
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-bold">
-                    {(selectedUser.full_name || "U").charAt(0)}
-                  </div>
+                  {selectedUser.avatar_url ? (
+                    <img src={selectedUser.avatar_url} alt={selectedUser.full_name} className="w-16 h-16 rounded-full object-cover border-2 border-border" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-bold">
+                      {(selectedUser.full_name || "U").charAt(0)}
+                    </div>
+                  )}
                   <div>
                     <p className="text-lg font-bold">{selectedUser.full_name}</p>
                     {roleBadge(selectedUser.role)}
