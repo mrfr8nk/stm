@@ -38,7 +38,7 @@ const HeroSection = () => {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up" style={{ animationDelay: "0.6s" }}>
           <Link
-            to="/contact"
+            to="/admissions"
             className="bg-secondary text-secondary-foreground px-8 py-4 rounded-xl font-body font-bold text-lg hover:opacity-90 transition-all hover:-translate-y-1 shadow-lg flex items-center justify-center gap-2"
           >
             <FileText className="w-5 h-5" />

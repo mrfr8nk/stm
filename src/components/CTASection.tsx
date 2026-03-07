@@ -18,14 +18,14 @@ const CTASection = () => {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            to="/contact"
+            to="/admissions"
             className="bg-secondary text-secondary-foreground px-8 py-4 rounded-xl font-body font-bold text-lg hover:opacity-90 transition-all hover:-translate-y-1 shadow-lg flex items-center justify-center gap-2"
           >
             <FileText className="w-5 h-5" />
             Apply Now
           </Link>
           <Link
-            to="/about"
+            to="/admissions#pass-rates"
             className="bg-primary-foreground/10 text-primary-foreground border-2 border-primary-foreground/30 px-8 py-4 rounded-xl font-body font-bold text-lg hover:bg-primary-foreground/20 transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
           >
             <TrendingUp className="w-5 h-5" />
