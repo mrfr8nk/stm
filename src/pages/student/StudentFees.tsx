@@ -76,6 +76,7 @@ const StudentFees = () => {
                   <TableHead>Balance</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Receipt</TableHead>
+                  <TableHead>Payment Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -96,6 +97,10 @@ const StudentFees = () => {
                       </TableCell>
                       <TableCell className="text-xs">{methodLabel((f as any).payment_method)}</TableCell>
                       <TableCell className="text-xs font-mono">{f.receipt_number || "—"}</TableCell>
+                      <TableCell className="text-sm">
+                        {f.payment_date ? new Date(f.payment_date).toLocaleDateString() : "—"}
+                        <span className="text-xs text-muted-foreground ml-1">{new Date(f.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                      </TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${isPaid ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                           {isPaid ? "Paid" : "Owing"}
