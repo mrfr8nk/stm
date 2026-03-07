@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, RotateCcw, FileDown, BarChart3, UserSearch, BookOpen, ClipboardCheck, DollarSign, Heart, Shield, X } from "lucide-react";
+import { Search, RotateCcw, FileDown, BarChart3, UserSearch, BookOpen, ClipboardCheck, DollarSign, Heart, Shield, X, ScanLine } from "lucide-react";
+import BarcodeScanner from "@/components/admin/fees/BarcodeScanner";
 
 import FeeStructureCard from "@/components/admin/fees/FeeStructureCard";
 import FeeStatsCards from "@/components/admin/fees/FeeStatsCards";
@@ -34,6 +35,7 @@ const AdminFees = () => {
   const [zigRate, setZigRate] = useState(DEFAULT_ZIG_RATE);
   const [feeStructure, setFeeStructure] = useState(DEFAULT_FEE_STRUCTURE);
   const [showCharts, setShowCharts] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // Payment dialog
   const [payRecord, setPayRecord] = useState<any>(null);
@@ -154,6 +156,9 @@ const AdminFees = () => {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="font-display text-2xl font-bold text-foreground">Fee Management</h1>
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setScannerOpen(true)}>
+              <ScanLine className="w-4 h-4 mr-1" /> Verify Receipt
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setShowCharts(!showCharts)}>
               <BarChart3 className="w-4 h-4 mr-1" /> {showCharts ? "Hide Charts" : "Charts"}
             </Button>
@@ -466,6 +471,13 @@ const AdminFees = () => {
             )}
           </DialogContent>
         </Dialog>
+        <BarcodeScanner
+          open={scannerOpen}
+          onOpenChange={setScannerOpen}
+          students={students}
+          studentProfiles={studentProfiles}
+          classes={classes}
+        />
       </div>
     </DashboardLayout>
   );
