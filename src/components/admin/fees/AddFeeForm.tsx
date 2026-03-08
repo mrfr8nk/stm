@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PAYMENT_METHODS, getTermFromDate, generateReceipt, methodLabel } from "./FeeConstants";
+import StudentSearchCombobox from "./StudentSearchCombobox";
 
 interface Props {
   students: any[];
@@ -17,82 +18,119 @@ interface Props {
   classes?: any[];
 }
 
+const TERMS = [
+  { value: "term_1", label: "Term 1" },
+  { value: "term_2", label: "Term 2" },
+  { value: "term_3", label: "Term 3" },
+];
+
 const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, onAdded, classes }: Props) => {
   const { toast } = useToast();
   const [selectedStudent, setSelectedStudent] = useState("");
-  const [term, setTerm] = useState(getTermFromDate());
+  const [selectedTerms, setSelectedTerms] = useState<string[]>([getTermFromDate()]);
   const [feeYear, setFeeYear] = useState(new Date().getFullYear().toString());
   const [amountPaid, setAmountPaid] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [currency, setCurrency] = useState("USD");
   const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getStudentLevel = (id: string) => studentProfiles.find((s) => s.user_id === id)?.level || "o_level";
 
   const selectedLevel = selectedStudent ? getStudentLevel(selectedStudent) : "o_level";
   const fees = feeStructure[selectedLevel] || { tuition: 120, levy: 0 };
-  const totalDue = fees.tuition + fees.levy;
+  const perTermDue = fees.tuition + fees.levy;
+  const totalDue = perTermDue * selectedTerms.length;
+
+  const toggleTerm = (term: string) => {
+    setSelectedTerms((prev) =>
+      prev.includes(term) ? prev.filter((t) => t !== term) : [...prev, term]
+    );
+  };
 
   const handleAdd = async () => {
     if (!selectedStudent) {
       toast({ title: "Error", description: "Select a student.", variant: "destructive" });
       return;
     }
-    const paidRaw = Number(amountPaid) || 0;
-    const paidUSD = currency === "ZIG" ? paidRaw / zigRate : paidRaw;
-    const receiptNumber = paidUSD > 0 ? generateReceipt() : null;
+    if (selectedTerms.length === 0) {
+      toast({ title: "Error", description: "Select at least one term.", variant: "destructive" });
+      return;
+    }
 
-    const { error } = await supabase.from("fee_records").insert({
+    setIsSubmitting(true);
+    const paidRaw = Number(amountPaid) || 0;
+    const totalPaidUSD = currency === "ZIG" ? paidRaw / zigRate : paidRaw;
+
+    // Split payment evenly across selected terms
+    const perTermPaid = selectedTerms.length > 0 ? totalPaidUSD / selectedTerms.length : 0;
+
+    const records = selectedTerms.map((term) => ({
       student_id: selectedStudent,
       term: term as any,
       academic_year: parseInt(feeYear),
-      amount_due: totalDue,
-      amount_paid: Math.round(paidUSD * 100) / 100,
+      amount_due: perTermDue,
+      amount_paid: Math.round(perTermPaid * 100) / 100,
       notes: notes || null,
-      receipt_number: receiptNumber,
-      payment_date: paidUSD > 0 ? new Date().toISOString().split("T")[0] : null,
+      receipt_number: perTermPaid > 0 ? generateReceipt() : null,
+      payment_date: perTermPaid > 0 ? new Date().toISOString().split("T")[0] : null,
       payment_method: paymentMethod,
       currency,
-      zig_amount: Math.round(totalDue * zigRate * 100) / 100,
-    } as any);
+      zig_amount: Math.round(perTermDue * zigRate * 100) / 100,
+    }));
 
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else {
-      toast({ title: "Fee Record Created", description: receiptNumber ? `Receipt: ${receiptNumber}` : `$${totalDue} billed` });
+    const { error } = await supabase.from("fee_records").insert(records as any);
 
-      // Send receipt email if payment was made
-      if (receiptNumber && paidUSD > 0) {
-        const student = students.find(s => s.user_id === selectedStudent);
-        const sp = studentProfiles.find(s => s.user_id === selectedStudent);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      const termLabels = selectedTerms.map((t) => t.replace("_", " ").toUpperCase()).join(", ");
+      toast({
+        title: `${selectedTerms.length} Fee Record${selectedTerms.length > 1 ? "s" : ""} Created`,
+        description: totalPaidUSD > 0
+          ? `$${totalPaidUSD.toFixed(2)} paid across ${termLabels}`
+          : `$${totalDue} billed for ${termLabels}`,
+      });
+
+      // Send receipt emails for paid records
+      if (totalPaidUSD > 0) {
+        const student = students.find((s) => s.user_id === selectedStudent);
+        const sp = studentProfiles.find((s) => s.user_id === selectedStudent);
         const cls = sp?.class_id && classes ? classes.find((c: any) => c.id === sp.class_id) : null;
         const className = cls ? `${cls.name}${cls.stream ? ` (${cls.stream})` : ""}` : undefined;
 
         if (student?.email) {
-          supabase.functions.invoke("send-branded-email", {
-            body: {
-              email: student.email,
-              type: "fee_receipt",
-              receipt_data: {
-                studentName: student.full_name,
-                receiptNumber,
-                academicYear: parseInt(feeYear),
-                term,
-                amountDue: totalDue,
-                amountPaid: Math.round(paidUSD * 100) / 100,
-                paymentMethod: methodLabel(paymentMethod),
-                paymentDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-                className,
-              },
-            },
-          }).catch(() => {});
+          for (const rec of records) {
+            if (rec.receipt_number) {
+              supabase.functions.invoke("send-branded-email", {
+                body: {
+                  email: student.email,
+                  type: "fee_receipt",
+                  receipt_data: {
+                    studentName: student.full_name,
+                    receiptNumber: rec.receipt_number,
+                    academicYear: parseInt(feeYear),
+                    term: rec.term,
+                    amountDue: perTermDue,
+                    amountPaid: Math.round(perTermPaid * 100) / 100,
+                    paymentMethod: methodLabel(paymentMethod),
+                    paymentDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+                    className,
+                  },
+                },
+              }).catch(() => {});
+            }
+          }
         }
       }
 
       setSelectedStudent("");
       setAmountPaid("");
       setNotes("");
+      setSelectedTerms([getTermFromDate()]);
       onAdded();
     }
+    setIsSubmitting(false);
   };
 
   return (
@@ -102,29 +140,50 @@ const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, o
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-3">
-          <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm flex-1 min-w-[200px]" value={selectedStudent} onChange={(e) => setSelectedStudent(e.target.value)}>
-            <option value="">Select Student...</option>
-            {students.map((s) => (
-              <option key={s.user_id} value={s.user_id}>{s.full_name}</option>
-            ))}
-          </select>
+          <StudentSearchCombobox
+            students={students}
+            value={selectedStudent}
+            onChange={setSelectedStudent}
+          />
           <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={feeYear} onChange={(e) => setFeeYear(e.target.value)}>
             {years.length > 0 ? years.map((y) => <option key={y} value={y}>{y}</option>) : <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>}
           </select>
-          <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={term} onChange={(e) => setTerm(e.target.value)}>
-            <option value="term_1">Term 1</option>
-            <option value="term_2">Term 2</option>
-            <option value="term_3">Term 3</option>
-          </select>
+        </div>
+
+        {/* Multi-term selector */}
+        <div className="flex flex-wrap gap-2">
+          <span className="text-sm text-muted-foreground self-center mr-1">Terms:</span>
+          {TERMS.map((t) => (
+            <Button
+              key={t.value}
+              type="button"
+              size="sm"
+              variant={selectedTerms.includes(t.value) ? "default" : "outline"}
+              onClick={() => toggleTerm(t.value)}
+            >
+              {t.label}
+            </Button>
+          ))}
+          {selectedTerms.length > 1 && (
+            <span className="text-xs text-muted-foreground self-center ml-2">
+              ({selectedTerms.length} terms selected — payment split evenly)
+            </span>
+          )}
         </div>
 
         {selectedStudent && (
           <div className="p-3 rounded-lg bg-muted text-sm space-y-1">
             <p className="font-medium text-foreground">
-              {selectedLevel.replace("_", " ").toUpperCase()} — Total Due: <span className="text-primary font-bold">${totalDue}</span>
+              {selectedLevel.replace("_", " ").toUpperCase()} — Per Term: <span className="text-primary font-bold">${perTermDue}</span>
               <span className="text-muted-foreground ml-2">(Tuition: ${fees.tuition} + Levy: ${fees.levy})</span>
             </p>
-            <p className="text-xs text-muted-foreground">ZIG {(totalDue * zigRate).toLocaleString()}</p>
+            {selectedTerms.length > 1 && (
+              <p className="font-bold text-foreground">
+                Total ({selectedTerms.length} terms): <span className="text-primary">${totalDue}</span>
+                <span className="text-muted-foreground ml-2">/ ZIG {(totalDue * zigRate).toLocaleString()}</span>
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">ZIG {(perTermDue * zigRate).toLocaleString()} per term</p>
           </div>
         )}
 
@@ -133,19 +192,23 @@ const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, o
             <option value="USD">USD ($)</option>
             <option value="ZIG">ZIG</option>
           </select>
-          <Input placeholder="Amount Paying" type="number" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} className="w-40" />
+          <Input placeholder={`Amount Paying${selectedTerms.length > 1 ? " (total)" : ""}`} type="number" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} className="w-40" />
           <select className="border border-input rounded-lg px-3 py-2 bg-background text-sm" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
             {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
           {amountPaid && (
             <div className="flex items-center text-xs text-muted-foreground bg-muted px-3 rounded-lg">
               {currency === "USD" ? `= ZIG ${(Number(amountPaid) * zigRate).toFixed(2)}` : `= $${(Number(amountPaid) / zigRate).toFixed(2)} USD`}
+              {selectedTerms.length > 1 && ` (${currency === "USD" ? `$${(Number(amountPaid) / selectedTerms.length).toFixed(2)}` : `ZIG ${(Number(amountPaid) / selectedTerms.length).toFixed(0)}`}/term)`}
             </div>
           )}
         </div>
         <div className="flex flex-wrap gap-3">
           <Input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 min-w-[200px]" />
-          <Button onClick={handleAdd}><Plus className="w-4 h-4 mr-1" /> Add Record</Button>
+          <Button onClick={handleAdd} disabled={isSubmitting}>
+            <Plus className="w-4 h-4 mr-1" />
+            {isSubmitting ? "Adding..." : `Add ${selectedTerms.length > 1 ? `${selectedTerms.length} Records` : "Record"}`}
+          </Button>
         </div>
       </CardContent>
     </Card>
