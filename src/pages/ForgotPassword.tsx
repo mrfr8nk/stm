@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -17,30 +16,43 @@ const ForgotPassword = () => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-branded-email`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim(),
+            type: 'reset_password',
+            redirect_url: `${window.location.origin}/reset-password`,
+          }),
+        }
+      );
 
-    setLoading(false);
+      const result = await res.json();
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
+      if (!res.ok) {
+        throw new Error(result.error || 'Failed to send email');
+      }
+
       setSent(true);
       toast({ title: "Email sent", description: "Check your inbox for the password reset link. Also check your spam/junk folder." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 px-4 py-8">
-      {/* Decorative background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        {/* School branding header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-card shadow-lg border-2 border-primary/20 mb-4">
             <img src={schoolLogo} alt="St. Mary's High School" className="h-16 w-16 object-contain" />
@@ -49,9 +61,7 @@ const ForgotPassword = () => {
           <p className="text-xs text-muted-foreground italic mt-1">Excellence & Integrity</p>
         </div>
 
-        {/* Main card */}
         <div className="bg-card rounded-2xl shadow-xl border border-border/50 overflow-hidden">
-          {/* Accent bar */}
           <div className="h-1.5 bg-gradient-to-r from-primary via-accent to-primary" />
 
           <div className="p-8">
@@ -86,11 +96,7 @@ const ForgotPassword = () => {
                   </ul>
                 </div>
 
-                <Button
-                  variant="outline"
-                  onClick={() => setSent(false)}
-                  className="w-full gap-2"
-                >
+                <Button variant="outline" onClick={() => setSent(false)} className="w-full gap-2">
                   <RefreshCw className="h-4 w-4" /> Try with a different email
                 </Button>
               </div>
@@ -123,13 +129,9 @@ const ForgotPassword = () => {
                   </div>
                   <Button type="submit" className="w-full h-12 gap-2 text-base font-semibold" disabled={loading}>
                     {loading ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 animate-spin" /> Sending...
-                      </>
+                      <><RefreshCw className="h-4 w-4 animate-spin" /> Sending...</>
                     ) : (
-                      <>
-                        <Send className="h-4 w-4" /> Send Reset Link
-                      </>
+                      <><Send className="h-4 w-4" /> Send Reset Link</>
                     )}
                   </Button>
                 </form>
@@ -144,7 +146,6 @@ const ForgotPassword = () => {
           </div>
         </div>
 
-        {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">
           © {new Date().getFullYear()} St. Mary's High School. All rights reserved.
         </p>
