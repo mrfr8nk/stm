@@ -191,9 +191,18 @@ const TeacherGrades = () => {
   useEffect(() => {
     if (selectedSubjectId && selectedClassId) {
       const match = assignments.find(a => a.subject_id === selectedSubjectId && a.class_id === selectedClassId);
-      if (match) setSelectedAssignment(match);
+      if (match) {
+        setSelectedAssignment(match);
+      } else if (classTeacherClassIds.has(selectedClassId)) {
+        // Class teacher accessing a subject they don't teach directly
+        const cls = classTeacherClasses.find(c => c.id === selectedClassId);
+        const sub = allSubjects.find(s => s.id === selectedSubjectId);
+        if (cls && sub) {
+          setSelectedAssignment({ class_id: selectedClassId, subject_id: selectedSubjectId, classes: cls, subjects: sub });
+        }
+      }
     }
-  }, [selectedSubjectId, selectedClassId, assignments]);
+  }, [selectedSubjectId, selectedClassId, assignments, classTeacherClassIds]);
 
   return (
     <DashboardLayout role="teacher">

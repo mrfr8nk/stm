@@ -30,13 +30,22 @@ const TeacherAttendance = () => {
   const [summaryStats, setSummaryStats] = useState<any[]>([]);
   const [search, setSearch] = useState("");
 
+  const [classTeacherClasses, setClassTeacherClasses] = useState<any[]>([]);
+
   useEffect(() => {
     if (!user) return;
-    supabase.from("teacher_assignments").select("*, classes(*)").eq("teacher_id", user.id)
-      .then(({ data }) => setAssignments(data || []));
+    Promise.all([
+      supabase.from("teacher_assignments").select("*, classes(*)").eq("teacher_id", user.id),
+      supabase.from("classes").select("*").eq("class_teacher_id", user.id).is("deleted_at", null),
+    ]).then(([assignRes, ctRes]) => {
+      setAssignments(assignRes.data || []);
+      setClassTeacherClasses(ctRes.data || []);
+    });
   }, [user]);
 
-  const uniqueClasses = Array.from(new Map(assignments.map(a => [a.class_id, a.classes])).values()).filter(Boolean);
+  const assignmentClassMap = new Map(assignments.map(a => [a.class_id, a.classes]));
+  classTeacherClasses.forEach(c => { if (!assignmentClassMap.has(c.id)) assignmentClassMap.set(c.id, c); });
+  const uniqueClasses = Array.from(assignmentClassMap.values()).filter(Boolean);
 
   useEffect(() => {
     if (!selectedClassId || !user) return;

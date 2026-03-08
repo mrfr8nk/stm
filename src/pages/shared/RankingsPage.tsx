@@ -39,6 +39,11 @@ const RankingsPage = ({ classFilter = true, studentHighlight, defaultClass }: Ra
     fetch();
   }, []);
 
+  // Auto-select default class when provided
+  useEffect(() => {
+    if (defaultClass && !selectedClass) setSelectedClass(defaultClass);
+  }, [defaultClass]);
+
   const getName = (uid: string) => profiles.find(p => p.user_id === uid)?.full_name || "Unknown";
   const getSubjectName = (id: string) => subjects.find(s => s.id === id)?.name || "—";
 
