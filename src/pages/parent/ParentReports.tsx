@@ -160,13 +160,14 @@ const ParentReports = () => {
     return "Unsatisfactory. Immediate intervention required.";
   };
 
-  const getHeadmasterRemark = (avg: number) => {
-    if (avg >= 80) return "An exemplary student. The school is proud of this achievement.";
-    if (avg >= 70) return "Commendable performance. Continue striving for excellence.";
-    if (avg >= 60) return "A pleasing performance. With more dedication, greater heights can be reached.";
-    if (avg >= 50) return "A fair attempt. More effort and focus are encouraged next term.";
-    if (avg >= 40) return "Performance needs significant improvement. Parents are advised to assist.";
-    return "Very poor performance. A meeting with the parents is recommended.";
+  const getHeadmasterRemark = (avg: number, name: string) => {
+    const first = name.split(" ")[0];
+    if (avg >= 80) return `${first} is an exemplary student. The school is proud of this achievement.`;
+    if (avg >= 70) return `${first} has shown commendable performance. Continue striving for excellence.`;
+    if (avg >= 60) return `A pleasing performance by ${first}. With more dedication, greater heights can be reached.`;
+    if (avg >= 50) return `A fair attempt by ${first}. More effort and focus are encouraged next term.`;
+    if (avg >= 40) return `${first}'s performance needs significant improvement. Parents are advised to assist.`;
+    return `Very poor performance by ${first}. A meeting with the parents is recommended.`;
   };
 
   const fetchSignatureImages = async (): Promise<Map<string, { url: string; name: string; base64: string }>> => {
@@ -324,7 +325,7 @@ const ParentReports = () => {
     y += 18;
     doc.setFillColor(250, 251, 252); doc.roundedRect(15, y, pw - 30, 14, 2, 2, "FD");
     doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.setTextColor(...pc); doc.text("HEADMASTER'S REMARK", 18, y + 4);
-    doc.setFont("helvetica", "normal"); doc.setTextColor(60); doc.setFontSize(8); doc.text(getHeadmasterRemark(avgMark), 18, y + 10);
+    doc.setFont("helvetica", "normal"); doc.setTextColor(60); doc.setFontSize(8); doc.text(getHeadmasterRemark(avgMark, profileName), 18, y + 10);
     y += 18;
 
     // Grading key
