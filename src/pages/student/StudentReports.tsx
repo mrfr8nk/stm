@@ -130,19 +130,32 @@ const StudentReports = () => {
     return "Unsatisfactory. Immediate intervention required.";
   };
 
-  // Pre-load logo on mount
+  // Pre-load logo on mount using fetch for reliability
   useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(img, 0, 0);
-      logoBase64Ref.current = canvas.toDataURL("image/png");
+    const loadLogo = async () => {
+      try {
+        const response = await fetch(schoolLogo);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          logoBase64Ref.current = reader.result as string;
+        };
+        reader.readAsDataURL(blob);
+      } catch (e) {
+        // Fallback: try canvas approach
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          canvas.getContext("2d")?.drawImage(img, 0, 0);
+          logoBase64Ref.current = canvas.toDataURL("image/png");
+        };
+        img.src = schoolLogo;
+      }
     };
-    img.src = schoolLogo;
+    loadLogo();
   }, []);
 
   // Fetch signatures for report

@@ -40,18 +40,31 @@ const ParentReports = () => {
     phone: "+263 242 123 456",
   });
 
-  // Pre-load logo
+  // Pre-load logo using fetch for reliability
   useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      canvas.getContext("2d")?.drawImage(img, 0, 0);
-      logoBase64Ref.current = canvas.toDataURL("image/png");
+    const loadLogo = async () => {
+      try {
+        const response = await fetch(schoolLogo);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          logoBase64Ref.current = reader.result as string;
+        };
+        reader.readAsDataURL(blob);
+      } catch (e) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          canvas.getContext("2d")?.drawImage(img, 0, 0);
+          logoBase64Ref.current = canvas.toDataURL("image/png");
+        };
+        img.src = schoolLogo;
+      }
     };
-    img.src = schoolLogo;
+    loadLogo();
   }, []);
 
   useEffect(() => {
