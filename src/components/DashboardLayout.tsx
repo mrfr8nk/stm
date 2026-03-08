@@ -27,6 +27,7 @@ const teacherNav: NavItem[] = [
   { label: "Report Cards", path: "/teacher/reports", icon: FileText },
   { label: "Messages", path: "/teacher/messages", icon: MessageSquare },
   { label: "Announcements", path: "/teacher/announcements", icon: Bell },
+  { label: "Record Book", path: "/teacher/record-book", icon: BookOpen },
   { label: "Settings", path: "/teacher/profile", icon: Settings },
 ];
 
