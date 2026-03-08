@@ -172,6 +172,21 @@ const StudentReports = () => {
     const dateGenerated = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
     const ordinal = (n: number) => n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`;
 
+    // QR code verification data
+    const qrData = encodeURIComponent(JSON.stringify({
+      serial: serialNo,
+      student: profileName,
+      studentId: studentProfile?.student_id || "",
+      class: className,
+      term: termLabel,
+      year,
+      avg: avgMark,
+      subjects: grades.length,
+      school: schoolInfo.name,
+      generated: dateGenerated
+    }));
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${qrData}`;
+
     const getGradeScaleHTML = () => {
       const scales = [...gradingScales].sort((a, b) => b.max_mark - a.max_mark);
       if (scales.length > 0) {
