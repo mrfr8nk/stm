@@ -172,6 +172,21 @@ const StudentReports = () => {
     const dateGenerated = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
     const ordinal = (n: number) => n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`;
 
+    // QR code verification data
+    const qrData = encodeURIComponent(JSON.stringify({
+      serial: serialNo,
+      student: profileName,
+      studentId: studentProfile?.student_id || "",
+      class: className,
+      term: termLabel,
+      year,
+      avg: avgMark,
+      subjects: grades.length,
+      school: schoolInfo.name,
+      generated: dateGenerated
+    }));
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${qrData}`;
+
     const getGradeScaleHTML = () => {
       const scales = [...gradingScales].sort((a, b) => b.max_mark - a.max_mark);
       if (scales.length > 0) {
@@ -222,8 +237,12 @@ const StudentReports = () => {
   .security-strip { background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(10,61,98,0.03) 5px, rgba(10,61,98,0.03) 10px); padding: 4px 10px; text-align: center; font-size: 6.5pt; color: #bbb; font-family: 'Courier New', monospace; margin-top: 8px; border: 1px solid #eee; }
   .grading-key { font-size: 7.5pt; color: #777; margin-bottom: 8px; }
   .grading-key td { padding: 2px 6px; border: 1px solid #e0e0e0; }
-  .stamp { position: absolute; bottom: 120px; right: 30px; width: 80px; height: 80px; border: 2px solid rgba(10,61,98,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; transform: rotate(-15deg); font-size: 7pt; color: rgba(10,61,98,0.2); font-weight: bold; text-align: center; text-transform: uppercase; }
-  @media print { .no-print { display: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+   .stamp { position: absolute; bottom: 120px; right: 30px; width: 80px; height: 80px; border: 2px solid rgba(10,61,98,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; transform: rotate(-15deg); font-size: 7pt; color: rgba(10,61,98,0.2); font-weight: bold; text-align: center; text-transform: uppercase; }
+   .qr-section { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background: #fafbfc; }
+   .qr-section img { width: 100px; height: 100px; }
+   .qr-section .qr-info { font-size: 7pt; color: #888; line-height: 1.6; }
+   .qr-section .qr-info strong { color: #0a3d62; }
+   @media print { .no-print { display: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style></head><body>
 <div class="watermark">OFFICIAL</div>
 <div class="report">
@@ -301,8 +320,22 @@ const StudentReports = () => {
 
   <div class="stamp">OFFICIAL<br/>DOCUMENT</div>
   
+  <div class="qr-section">
+    <img src="${qrUrl}" alt="Verification QR Code" />
+    <div class="qr-info">
+      <strong>VERIFICATION QR CODE</strong><br/>
+      Scan this code to verify the authenticity of this report card.<br/>
+      Serial: <strong>${serialNo}</strong><br/>
+      Student: <strong>${profileName}</strong> (${studentProfile?.student_id || "N/A"})<br/>
+      Class: <strong>${className}</strong> | ${termLabel} ${year}<br/>
+      Average: <strong>${avgMark}%</strong> | Grade: <strong>${getGradeLetter(avgMark)}</strong><br/>
+      Generated: ${dateGenerated}<br/>
+      <em>Any unauthorized alteration of this document renders it void.</em>
+    </div>
+  </div>
+  
   <div class="security-strip">
-    OFFICIAL ACADEMIC RECORD | Serial: ${serialNo} | Generated: ${dateGenerated} | ${schoolInfo.name} | This document is computer-generated. Any unauthorized alteration renders it void.
+    OFFICIAL ACADEMIC RECORD | Serial: ${serialNo} | Generated: ${dateGenerated} | ${schoolInfo.name} | This document is computer-generated and verified by QR code.
   </div>
   
   <div class="footer">
@@ -311,7 +344,7 @@ const StudentReports = () => {
   </div>
   
   <div class="no-print" style="text-align:center;margin-top:20px;display:flex;gap:10px;justify-content:center">
-    <button onclick="window.print()" style="padding:10px 30px;font-size:14px;background:#0a3d62;color:white;border:none;border-radius:4px;cursor:pointer;">🖨️ Print Report Card</button>
+    <button onclick="window.print()" style="padding:10px 30px;font-size:14px;background:#0a3d62;color:white;border:none;border-radius:4px;cursor:pointer;">🖨️ Print / Save as PDF</button>
     <button onclick="window.close()" style="padding:10px 30px;font-size:14px;background:#666;color:white;border:none;border-radius:4px;cursor:pointer;">✕ Close</button>
   </div>
 </div></body></html>`;
