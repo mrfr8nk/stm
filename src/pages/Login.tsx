@@ -162,7 +162,7 @@ const Login = () => {
 
             <div className="text-center mt-6 space-y-2">
               <Link to="/signup" className="text-sm text-primary hover:underline">
-                Don't have an account? Sign up with access code
+                Don't have an account? Sign up
               </Link>
               <Link to="/" className="text-sm text-muted-foreground hover:underline block">
                 ← Back to website
