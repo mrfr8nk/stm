@@ -288,7 +288,7 @@ const AdminFees = () => {
         <FeeStatsCards totalDue={totalDue} totalPaid={totalPaid} zigRate={zigRate} />
         {showCharts && <FeeCharts records={filtered} getStudentName={getStudentName} />}
 
-        <AddFeeForm students={students} studentProfiles={studentProfiles} feeStructure={feeStructure} zigRate={zigRate} years={years} onAdded={fetchData} classes={classes} />
+        <AddFeeForm students={students} studentProfiles={studentProfiles} feeStructure={feeStructure} zigRate={zigRate} years={years} onAdded={fetchData} classes={classes} existingRecords={feeRecords} onPayExisting={(r) => { setPayRecord(r); setPayOpen(true); }} />
 
         {/* Filters */}
         <Card>
