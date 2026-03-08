@@ -115,6 +115,7 @@ const Signup = () => {
         form: parseInt(selectedForm),
         class_id: selectedClass || null,
         date_of_birth: dateOfBirth || null,
+        gender: gender || null,
         guardian_name: guardianName || null,
         guardian_phone: guardianPhone || null,
         guardian_email: guardianEmail || null,
