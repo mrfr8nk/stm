@@ -37,6 +37,7 @@ const AdminFees = () => {
   const [feeStructure, setFeeStructure] = useState(DEFAULT_FEE_STRUCTURE);
   const [showCharts, setShowCharts] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [sendingReminders, setSendingReminders] = useState(false);
 
   // Scholarships
   const [scholarships, setScholarships] = useState<any[]>([]);
