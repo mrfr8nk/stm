@@ -483,7 +483,7 @@ const Signup = () => {
                     {selectedRole === "parent" && (
                       <div className="border-t border-border pt-3 space-y-3">
                         <p className="text-sm font-semibold text-foreground">Link to Your Child</p>
-                        <p className="text-xs text-muted-foreground">Enter your child's Student ID (e.g. STM20260001) to automatically link your account. You can also link later through the admin.</p>
+                         <p className="text-xs text-muted-foreground">Enter your child's Student ID (e.g. STM20260001) to automatically link your account. Your phone or email must match the guardian info on the student's profile. You can also request linking through the school admin.</p>
                         <div>
                           <label className="text-sm font-medium text-foreground">Child's Student ID</label>
                           <Input 
