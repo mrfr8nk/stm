@@ -96,6 +96,37 @@ const AdminSettings = () => {
     } else {
       setReportsLocked(newValue);
       toast({ title: newValue ? "Reports Locked" : "Reports Unlocked" });
+
+      // When unlocking reports (making them available), send notification emails
+      if (!newValue) {
+        toast({ title: "Sending Notifications", description: "Notifying all users that results are available..." });
+        try {
+          // Fetch all unique emails from profiles
+          const { data: profileEmails } = await supabase
+            .from("profiles")
+            .select("email")
+            .not("email", "is", null);
+
+          const allEmails = [...new Set((profileEmails || []).map((p: any) => p.email).filter(Boolean))];
+
+          if (allEmails.length > 0) {
+            const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-branded-email`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+              body: JSON.stringify({ type: "results_available", emails: allEmails }),
+            });
+            const result = await resp.json();
+            if (result.success) {
+              toast({ title: "Notifications Sent! ✉️", description: `${result.sent} users notified that results are available.` });
+            } else {
+              toast({ title: "Notification Issue", description: result.error || "Some emails may not have been sent.", variant: "destructive" });
+            }
+          }
+        } catch (e: any) {
+          console.error("Failed to send result notifications:", e);
+          toast({ title: "Notification Error", description: "Results unlocked but email notifications failed.", variant: "destructive" });
+        }
+      }
     }
   };
 

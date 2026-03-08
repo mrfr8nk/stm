@@ -7,6 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const LOGO_URL = "https://vojhptlreurutrzftatn.supabase.co/storage/v1/object/public/staff-photos/school-logo.png";
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -23,16 +25,84 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, serviceKey);
-    const { email, type, redirect_url, full_name } = await req.json();
+    const { email, type, redirect_url, full_name, emails } = await req.json();
 
+    const schoolName = "St. Mary's High School";
+    const motto = "Excellence & Integrity";
+
+    // Handle bulk results notification
+    if (type === 'results_available') {
+      if (!emails || !Array.isArray(emails) || emails.length === 0) {
+        return new Response(JSON.stringify({ error: 'No email addresses provided' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const subject = `📊 Results Are Now Available - ${schoolName}`;
+      const htmlBody = buildEmailTemplate(schoolName, motto, `
+        <h2 style="color:#2c3e50;font-size:22px;font-weight:600;margin:0 0 16px;text-align:center;">Results Published! 🎉</h2>
+        <p style="color:#555;font-size:15px;line-height:1.7;margin:0 0 24px;text-align:center;">
+          ${schoolName} has released student report cards. You can now view academic results on the school portal.
+        </p>
+        <div style="background:linear-gradient(135deg,#0a3d62,#1a5276);border-radius:16px;padding:32px;text-align:center;margin:0 auto 24px;">
+          <p style="color:#b8d4e8;font-size:14px;margin:0 0 8px;">📋</p>
+          <p style="color:#ffffff;font-size:20px;font-weight:700;margin:0 0 8px;">Report Cards Are Live</p>
+          <p style="color:#b8d4e8;font-size:13px;margin:0;">Log in to the portal to view grades, positions, and teacher comments.</p>
+        </div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td align="center" style="padding:8px 0 24px;">
+            <a href="${supabaseUrl.replace('.supabase.co', '.lovable.app')}/login" style="display:inline-block;background:linear-gradient(135deg,#27ae60,#2ecc71);color:#ffffff;text-decoration:none;padding:16px 48px;border-radius:12px;font-size:16px;font-weight:600;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(39,174,96,0.3);">
+              📊 View Results Now
+            </a>
+          </td></tr>
+        </table>
+        <div style="background:#f0f4f8;border-radius:8px;padding:16px;text-align:center;">
+          <p style="color:#888;font-size:12px;margin:0;">If you have any questions about the results, please contact the school administration.</p>
+        </div>
+      `);
+
+      const client = new SMTPClient({
+        connection: {
+          hostname: "smtp.gmail.com",
+          port: 465,
+          tls: true,
+          auth: { username: gmailEmail, password: gmailAppPassword },
+        },
+      });
+
+      let sent = 0;
+      let failed = 0;
+      // Send in batches to avoid SMTP limits
+      for (const recipientEmail of emails) {
+        try {
+          await client.send({
+            from: `${schoolName} <${gmailEmail}>`,
+            to: recipientEmail,
+            subject,
+            content: "Please view this email in an HTML-compatible email client.",
+            html: htmlBody,
+          });
+          sent++;
+        } catch (e) {
+          console.error(`Failed to send to ${recipientEmail}:`, e);
+          failed++;
+        }
+      }
+
+      await client.close();
+
+      return new Response(JSON.stringify({ success: true, sent, failed, total: emails.length }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Single email types require email field
     if (!email) {
       return new Response(JSON.stringify({ error: 'Email is required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const schoolName = "St. Mary's High School";
-    const motto = "Excellence & Integrity";
     let subject = '';
     let htmlBody = '';
 
@@ -81,10 +151,7 @@ serve(async (req) => {
       `);
 
     } else if (type === 'verification_otp') {
-      // Generate a 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      // Store OTP in system_settings with expiry (10 min)
       const otpKey = `otp_${email.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
       const otpData = JSON.stringify({ code: otp, expires: Date.now() + 10 * 60 * 1000, email: email.toLowerCase() });
       
@@ -103,9 +170,16 @@ serve(async (req) => {
         <p style="color:#555;font-size:15px;line-height:1.7;margin:0 0 24px;text-align:center;">
           Use the verification code below to complete your registration at ${schoolName}.
         </p>
-        <div style="background:linear-gradient(135deg,#0a3d62,#1a5276);border-radius:16px;padding:32px;text-align:center;margin:0 auto 24px;max-width:320px;">
+        <div style="background:linear-gradient(135deg,#0a3d62,#1a5276);border-radius:16px;padding:32px;text-align:center;margin:0 auto 16px;max-width:320px;">
           <p style="color:#b8d4e8;font-size:13px;margin:0 0 12px;letter-spacing:1px;text-transform:uppercase;">Verification Code</p>
           <p style="color:#ffffff;font-size:42px;font-weight:800;letter-spacing:12px;margin:0;font-family:'Courier New',monospace;">${otp}</p>
+        </div>
+        <!-- Copy-friendly plain text version -->
+        <div style="text-align:center;margin-bottom:24px;">
+          <p style="color:#888;font-size:12px;margin:0 0 6px;">Tap the code below to copy:</p>
+          <div style="display:inline-block;background:#f8f9fa;border:2px dashed #0a3d62;border-radius:8px;padding:12px 28px;cursor:pointer;">
+            <span style="font-family:'Courier New',monospace;font-size:28px;font-weight:800;letter-spacing:8px;color:#0a3d62;user-select:all;-webkit-user-select:all;">${otp}</span>
+          </div>
         </div>
         <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:12px;padding:16px;margin-bottom:24px;">
           <p style="color:#666;font-size:13px;line-height:1.6;margin:0;">
@@ -117,53 +191,18 @@ serve(async (req) => {
         </div>
       `);
 
-    } else if (type === 'verify_otp') {
-      // Verify an OTP code
-      const { otp_code } = await req.json().catch(() => ({}));
-      const otpKey = `otp_${email.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
-      
-      const { data: otpRecord } = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', otpKey)
-        .single();
-
-      if (!otpRecord) {
-        return new Response(JSON.stringify({ error: 'No verification code found. Please request a new one.' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      const otpData = JSON.parse(otpRecord.value);
-      
-      if (Date.now() > otpData.expires) {
-        await supabase.from('system_settings').delete().eq('key', otpKey);
-        return new Response(JSON.stringify({ error: 'Verification code expired. Please request a new one.' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      // We already parsed the body above, need to get otp_code from original request
-      return new Response(JSON.stringify({ error: 'Use the /verify-otp endpoint' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-
     } else {
       return new Response(JSON.stringify({ error: 'Invalid email type' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Send email via Gmail SMTP
     const client = new SMTPClient({
       connection: {
         hostname: "smtp.gmail.com",
         port: 465,
         tls: true,
-        auth: {
-          username: gmailEmail,
-          password: gmailAppPassword,
-        },
+        auth: { username: gmailEmail, password: gmailAppPassword },
       },
     });
 
@@ -190,6 +229,7 @@ serve(async (req) => {
 });
 
 function buildEmailTemplate(schoolName: string, motto: string, content: string): string {
+  const logoUrl = "https://vojhptlreurutrzftatn.supabase.co/storage/v1/object/public/staff-photos/school-logo.png";
   return `
 <!DOCTYPE html>
 <html>
@@ -198,8 +238,9 @@ function buildEmailTemplate(schoolName: string, motto: string, content: string):
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:40px 20px;">
     <tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-        <tr><td style="background:linear-gradient(135deg,#0a3d62 0%,#1a5276 50%,#0a3d62 100%);padding:40px 40px 30px;text-align:center;">
-          <h1 style="color:#ffffff;font-size:24px;font-weight:700;margin:0 0 4px;letter-spacing:0.5px;">${schoolName}</h1>
+        <tr><td style="background:linear-gradient(135deg,#0a3d62 0%,#1a5276 50%,#0a3d62 100%);padding:30px 40px 24px;text-align:center;">
+          <img src="${logoUrl}" alt="${schoolName} Logo" width="80" height="80" style="display:block;margin:0 auto 12px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);object-fit:cover;" />
+          <h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 4px;letter-spacing:0.5px;">${schoolName}</h1>
           <p style="color:#b8d4e8;font-size:13px;font-style:italic;margin:0;">${motto}</p>
         </td></tr>
         <tr><td style="height:4px;background:linear-gradient(90deg,#e74c3c,#f39c12,#27ae60,#3498db);"></td></tr>
