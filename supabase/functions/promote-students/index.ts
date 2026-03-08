@@ -9,14 +9,14 @@ const corsHeaders = {
 // Define the max form per level
 const MAX_FORM: Record<string, number> = {
   zjc: 2,      // Form 1-2
-  o_level: 4,  // Form 3-4
+  o_level: 4,  // Form 3-4 (Form 4 = final, students graduate)
   a_level: 6,  // Form 5-6
 };
 
 const NEXT_LEVEL: Record<string, { level: string; form: number } | null> = {
   zjc: { level: "o_level", form: 3 },
-  o_level: { level: "a_level", form: 5 },
-  a_level: null, // graduates
+  o_level: null, // Form 4 students graduate — A-level enrollment is manual
+  a_level: null,  // Form 6 students graduate
 };
 
 Deno.serve(async (req) => {
