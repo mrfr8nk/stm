@@ -78,8 +78,7 @@ const TeacherGrades = () => {
       setStudents([]);
     }
 
-    const isClassTeacher = classTeacherClassIds.has(selectedAssignment.class_id);
-    
+
     const { data: existing } = await supabase.from("grades").select("*")
       .eq("subject_id", selectedAssignment.subject_id).eq("class_id", selectedAssignment.class_id)
       .eq("term", term as any).is("deleted_at", null);
