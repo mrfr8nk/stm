@@ -43,6 +43,7 @@ const StudentProfile = () => {
             emergency_contact: data.emergency_contact || "",
             emergency_phone: data.emergency_phone || "",
             date_of_birth: data.date_of_birth || "",
+            gender: data.gender || "",
           });
           setMedicalForm({
             blood_type: data.blood_type || "",
@@ -151,6 +152,15 @@ const StudentProfile = () => {
                   <Input value={editingIdentity ? identityForm.birth_cert_number : (studentProfile.birth_cert_number || "Not provided")} disabled={!editingIdentity} onChange={e => setIdentityForm({ ...identityForm, birth_cert_number: e.target.value })} /></div>
                 <div><label className="text-sm font-medium text-foreground">Date of Birth</label>
                   <Input type={editingIdentity ? "date" : "text"} value={editingIdentity ? identityForm.date_of_birth : (studentProfile.date_of_birth || "Not provided")} disabled={!editingIdentity} onChange={e => setIdentityForm({ ...identityForm, date_of_birth: e.target.value })} /></div>
+                <div><label className="text-sm font-medium text-foreground">Sex</label>
+                  <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm" disabled={!editingIdentity}
+                    value={editingIdentity ? identityForm.gender : (studentProfile.gender || "")}
+                    onChange={e => setIdentityForm({ ...identityForm, gender: e.target.value })}>
+                    <option value="">Not provided</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
                 <div><label className="text-sm font-medium text-foreground">Guardian Name</label>
                   <Input value={editingIdentity ? identityForm.guardian_name : (studentProfile.guardian_name || "Not provided")} disabled={!editingIdentity} onChange={e => setIdentityForm({ ...identityForm, guardian_name: e.target.value })} /></div>
                 <div><label className="text-sm font-medium text-foreground">Guardian Phone</label>

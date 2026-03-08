@@ -33,8 +33,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchRoleAndProfile = async (userId: string) => {
     const [roleRes, profileRes] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", userId).limit(1).single(),
-      supabase.from("profiles").select("full_name, email, avatar_url").eq("user_id", userId).single(),
+      supabase.from("profiles").select("full_name, email, avatar_url, is_banned").eq("user_id", userId).single(),
     ]);
+    if (profileRes.data?.is_banned) {
+      await supabase.auth.signOut();
+      setUser(null); setSession(null); setRole(null); setProfile(null);
+      alert("Your account has been banned. Please contact the school administration.");
+      return;
+    }
     if (roleRes.data) setRole(roleRes.data.role as AppRole);
     if (profileRes.data) setProfile(profileRes.data);
   };

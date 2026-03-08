@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Search, GraduationCap, BookOpen, Shield, Trash2, Eye, ArrowUpDown, Mail, Phone, Save, Edit, UserX, UserCheck, Link2, Unlink, UserPlus, CheckSquare, Square } from "lucide-react";
+import { Users, Search, GraduationCap, BookOpen, Shield, Trash2, Eye, ArrowUpDown, Mail, Phone, Save, Edit, UserX, UserCheck, Link2, Unlink, UserPlus, CheckSquare, Square, Ban, ShieldOff } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import ExportDropdown from "@/components/ExportDropdown";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -78,6 +78,7 @@ const AdminUsers = () => {
         address: sp.address || "", emergency_contact: sp.emergency_contact || "",
         emergency_phone: sp.emergency_phone || "", blood_type: sp.blood_type || "",
         allergies: sp.allergies || "", medical_conditions: sp.medical_conditions || "",
+        gender: sp.gender || "",
       });
     }
     setEditingSP(false);
@@ -105,6 +106,23 @@ const AdminUsers = () => {
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else {
       toast({ title: currentlyActive ? "Student Transferred" : "Student Reactivated" });
+      fetchData();
+      setDetailOpen(false);
+    }
+  };
+
+  const handleBanUser = async (userId: string, currentlyBanned: boolean) => {
+    const action = currentlyBanned ? "unban" : "ban";
+    const reason = currentlyBanned ? null : prompt("Enter ban reason (optional):");
+    if (!currentlyBanned && reason === null) return; // User cancelled prompt
+    const { error } = await supabase.from("profiles").update({
+      is_banned: !currentlyBanned,
+      banned_reason: currentlyBanned ? null : (reason || "Banned by admin"),
+      banned_at: currentlyBanned ? null : new Date().toISOString(),
+    }).eq("user_id", userId);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else {
+      toast({ title: currentlyBanned ? "User Unbanned" : "User Banned", description: currentlyBanned ? "Account has been restored." : "User can no longer access the system." });
       fetchData();
       setDetailOpen(false);
     }
@@ -250,7 +268,7 @@ const AdminUsers = () => {
         ) : sorted(data).length === 0 ? (
           <TableRow><TableCell colSpan={showRole ? 8 : 7} className="text-center py-8 text-muted-foreground">No users found.</TableCell></TableRow>
         ) : sorted(data).map(u => (
-          <TableRow key={u.id} className={`${u.studentProfile?.is_active === false ? "opacity-50 bg-destructive/5" : ""} ${selectedIds.has(u.user_id) ? "bg-primary/5" : ""}`}>
+          <TableRow key={u.id} className={`${u.is_banned ? "opacity-50 bg-destructive/10" : u.studentProfile?.is_active === false ? "opacity-50 bg-destructive/5" : ""} ${selectedIds.has(u.user_id) ? "bg-primary/5" : ""}`}>
             <TableCell>
               <Checkbox checked={selectedIds.has(u.user_id)} onCheckedChange={() => toggleSelect(u.user_id)} />
             </TableCell>
@@ -265,7 +283,8 @@ const AdminUsers = () => {
             </TableCell>
             <TableCell className="font-medium">
               {u.full_name}
-              {u.studentProfile?.is_active === false && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-destructive/10 text-destructive font-medium">TRANSFERRED</span>}
+              {u.is_banned && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-destructive text-destructive-foreground font-medium">BANNED</span>}
+              {u.studentProfile?.is_active === false && !u.is_banned && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-destructive/10 text-destructive font-medium">TRANSFERRED</span>}
             </TableCell>
             <TableCell className="text-sm">{u.email}</TableCell>
             <TableCell className="text-sm">{u.phone || "—"}</TableCell>
@@ -521,10 +540,32 @@ const AdminUsers = () => {
                     {roleBadge(selectedUser.role)}
                   </div>
                 </div>
+
+                {/* Ban / Unban */}
+                {selectedUser.role !== "admin" && (
+                  <div className={`flex items-center justify-between p-3 rounded-lg border ${selectedUser.is_banned ? "bg-destructive/10 border-destructive/30" : "bg-muted/30"}`}>
+                    <div className="flex items-center gap-2">
+                      {selectedUser.is_banned ? (
+                        <><Ban className="w-5 h-5 text-destructive" /><div><p className="font-medium text-destructive">Account Banned</p><p className="text-xs text-muted-foreground">{selectedUser.banned_reason || "No reason provided"}</p></div></>
+                      ) : (
+                        <><ShieldOff className="w-5 h-5 text-muted-foreground" /><p className="text-sm text-muted-foreground">Account is active and not banned</p></>
+                      )}
+                    </div>
+                    <Button
+                      variant={selectedUser.is_banned ? "outline" : "destructive"}
+                      size="sm"
+                      onClick={() => handleBanUser(selectedUser.user_id, selectedUser.is_banned)}
+                    >
+                      {selectedUser.is_banned ? <><UserCheck className="w-4 h-4 mr-1" /> Unban</> : <><Ban className="w-4 h-4 mr-1" /> Ban Account</>}
+                    </Button>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" /> {selectedUser.email || "—"}</div>
                   <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground" /> {selectedUser.phone || "—"}</div>
                   <div><span className="text-muted-foreground">Joined:</span> {new Date(selectedUser.created_at).toLocaleDateString()}</div>
+                  {selectedUser.gender && <div><span className="text-muted-foreground">Sex:</span> {selectedUser.gender === "male" ? "Male" : "Female"}</div>}
                 </div>
 
                 {/* Parent-Child Linking Section */}
@@ -559,12 +600,22 @@ const AdminUsers = () => {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="grid grid-cols-2 gap-3">
+                         <div className="grid grid-cols-2 gap-3">
                           {spField("Student ID", "student_id")}
                           {spField("Form", "form")}
                           {spField("National ID", "national_id")}
                           {spField("Birth Cert No.", "birth_cert_number")}
                           {spField("Date of Birth", "date_of_birth", editingSP ? "date" : "text")}
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Sex</label>
+                            <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm h-8" disabled={!editingSP}
+                              value={editingSP ? spForm.gender : (selectedUser?.studentProfile?.gender || "")}
+                              onChange={e => setSpForm({ ...spForm, gender: e.target.value })}>
+                              <option value="">—</option>
+                              <option value="male">Male</option>
+                              <option value="female">Female</option>
+                            </select>
+                          </div>
                           {spField("Guardian Name", "guardian_name")}
                           {spField("Guardian Phone", "guardian_phone")}
                           {spField("Guardian Email", "guardian_email")}

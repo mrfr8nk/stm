@@ -115,6 +115,7 @@ const Signup = () => {
         form: parseInt(selectedForm),
         class_id: selectedClass || null,
         date_of_birth: dateOfBirth || null,
+        gender: gender || null,
         guardian_name: guardianName || null,
         guardian_phone: guardianPhone || null,
         guardian_email: guardianEmail || null,
@@ -202,7 +203,8 @@ const Signup = () => {
     }
   };
 
-  // Inline student personal fields JSX (NOT a component to prevent remounting)
+  const [gender, setGender] = useState("");
+
   const studentPersonalFields = (
     <>
       <div className="grid grid-cols-2 gap-3">
@@ -213,6 +215,20 @@ const Signup = () => {
         <div>
           <label className="text-sm font-medium text-foreground">Date of Birth</label>
           <Input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium text-foreground">Sex</label>
+          <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm" value={gender} onChange={e => setGender(e.target.value)}>
+            <option value="">Select...</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground">National ID / Birth Cert No.</label>
+          <Input placeholder="e.g. 63-123456A78" value={nationalId} onChange={e => setNationalId(e.target.value)} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">

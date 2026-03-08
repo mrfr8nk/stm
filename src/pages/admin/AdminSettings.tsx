@@ -373,7 +373,8 @@ const AdminSettings = () => {
             </p>
             <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
               <p>• Form 1 → 2, Form 2 → 3 (ZJC → O Level), Form 3 → 4</p>
-              <p>• Form 4 → 5 (O Level → A Level), Form 5 → 6</p>
+              <p>• Form 4 → <strong>Graduated</strong> (O Level complete — A Level enrollment is manual)</p>
+              <p>• Form 5 → 6</p>
               <p>• Form 6 → <strong>Graduated</strong> (deactivated)</p>
               <p className="text-xs text-muted-foreground mt-2">Class assignments will be reset — you'll reassign students to new classes after promotion.</p>
             </div>

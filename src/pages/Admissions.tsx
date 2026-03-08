@@ -50,6 +50,7 @@ const Admissions = () => {
     email: "",
     phone: "",
     date_of_birth: "",
+    gender: "",
     level: "o_level" as "zjc" | "o_level" | "a_level",
     form: 1,
     guardian_name: "",
@@ -81,6 +82,7 @@ const Admissions = () => {
       email: form.email,
       phone: form.phone || null,
       date_of_birth: form.date_of_birth || null,
+      gender: form.gender || null,
       level: form.level,
       form: form.form,
       guardian_name: form.guardian_name || null,
@@ -162,7 +164,7 @@ const Admissions = () => {
                 <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                 <h3 className="font-display text-2xl font-bold text-foreground mb-2">Application Submitted!</h3>
                 <p className="text-muted-foreground mb-6">Thank you for applying to St. Mary's. We will review your application and contact you via email.</p>
-                <Button onClick={() => { setSubmitted(false); setForm({ full_name: "", email: "", phone: "", date_of_birth: "", level: "o_level", form: 1, guardian_name: "", guardian_phone: "", guardian_email: "", previous_school: "", address: "", notes: "", national_id: "" }); }}>
+                <Button onClick={() => { setSubmitted(false); setForm({ full_name: "", email: "", phone: "", date_of_birth: "", gender: "", level: "o_level", form: 1, guardian_name: "", guardian_phone: "", guardian_email: "", previous_school: "", address: "", notes: "", national_id: "" }); }}>
                   Submit Another Application
                 </Button>
               </CardContent>
@@ -209,6 +211,14 @@ const Admissions = () => {
                       <div>
                         <label className="text-sm font-medium text-foreground mb-1 block">National ID / Birth Cert No.</label>
                         <Input name="national_id" value={form.national_id} onChange={handleChange} placeholder="e.g. 63-123456A78" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Sex</label>
+                        <select name="gender" value={form.gender} onChange={handleChange} className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm">
+                          <option value="">Select...</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                        </select>
                       </div>
                     </div>
                   </div>
