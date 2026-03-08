@@ -212,6 +212,14 @@ const Admissions = () => {
                         <label className="text-sm font-medium text-foreground mb-1 block">National ID / Birth Cert No.</label>
                         <Input name="national_id" value={form.national_id} onChange={handleChange} placeholder="e.g. 63-123456A78" />
                       </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Sex</label>
+                        <select name="gender" value={form.gender} onChange={handleChange} className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm">
+                          <option value="">Select...</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 

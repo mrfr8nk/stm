@@ -559,12 +559,22 @@ const AdminUsers = () => {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="grid grid-cols-2 gap-3">
+                         <div className="grid grid-cols-2 gap-3">
                           {spField("Student ID", "student_id")}
                           {spField("Form", "form")}
                           {spField("National ID", "national_id")}
                           {spField("Birth Cert No.", "birth_cert_number")}
                           {spField("Date of Birth", "date_of_birth", editingSP ? "date" : "text")}
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Sex</label>
+                            <select className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm h-8" disabled={!editingSP}
+                              value={editingSP ? spForm.gender : (selectedUser?.studentProfile?.gender || "")}
+                              onChange={e => setSpForm({ ...spForm, gender: e.target.value })}>
+                              <option value="">—</option>
+                              <option value="male">Male</option>
+                              <option value="female">Female</option>
+                            </select>
+                          </div>
                           {spField("Guardian Name", "guardian_name")}
                           {spField("Guardian Phone", "guardian_phone")}
                           {spField("Guardian Email", "guardian_email")}
