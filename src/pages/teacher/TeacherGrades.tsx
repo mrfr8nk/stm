@@ -73,9 +73,6 @@ const TeacherGrades = () => {
       .eq("subject_id", selectedAssignment.subject_id).eq("class_id", selectedAssignment.class_id)
       .eq("term", term as any).not("deleted_at", "is", null);
 
-    const { data: deleted } = await supabase.from("grades").select("*")
-      .eq("subject_id", selectedAssignment.subject_id).eq("class_id", selectedAssignment.class_id)
-      .eq("term", term as any).eq("teacher_id", user!.id).not("deleted_at", "is", null);
 
     setExistingGrades(existing || []);
     setDeletedGrades(deleted || []);
