@@ -130,13 +130,14 @@ const StudentReports = () => {
     return "Unsatisfactory. Immediate intervention required.";
   };
 
-  const getHeadmasterRemark = (avg: number) => {
-    if (avg >= 80) return "An exemplary student. The school is proud of this achievement.";
-    if (avg >= 70) return "Commendable performance. Continue striving for excellence.";
-    if (avg >= 60) return "A pleasing performance. With more dedication, greater heights can be reached.";
-    if (avg >= 50) return "A fair attempt. More effort and focus are encouraged next term.";
-    if (avg >= 40) return "Performance needs significant improvement. Parents are advised to assist.";
-    return "Very poor performance. A meeting with the parents is recommended.";
+  const getHeadmasterRemark = (avg: number, name: string) => {
+    const first = name.split(" ")[0];
+    if (avg >= 80) return `${first} is an exemplary student. The school is proud of this achievement.`;
+    if (avg >= 70) return `${first} has shown commendable performance. Continue striving for excellence.`;
+    if (avg >= 60) return `A pleasing performance by ${first}. With more dedication, greater heights can be reached.`;
+    if (avg >= 50) return `A fair attempt by ${first}. More effort and focus are encouraged next term.`;
+    if (avg >= 40) return `${first}'s performance needs significant improvement. Parents are advised to assist.`;
+    return `Very poor performance by ${first}. A meeting with the parents is recommended.`;
   };
 
   // Pre-load logo on mount using fetch for reliability
