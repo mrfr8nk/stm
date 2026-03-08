@@ -196,8 +196,8 @@ const StudentReports = () => {
     const pw = doc.internal.pageSize.getWidth();
     const primaryColor: [number, number, number] = [10, 61, 98];
 
-    // Try to add logo
-    const logoBase64 = await getLogoBase64();
+    // Use pre-cached logo
+    const logoBase64 = logoBase64Ref.current;
     if (logoBase64) {
       try { doc.addImage(logoBase64, "PNG", 15, 10, 18, 18); } catch {}
       try { doc.addImage(logoBase64, "PNG", pw - 33, 10, 18, 18); } catch {}
