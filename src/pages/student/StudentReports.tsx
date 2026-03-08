@@ -34,7 +34,7 @@ const StudentReports = () => {
   const [classGrades, setClassGrades] = useState<any[]>([]);
   const [profileName, setProfileName] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-
+  const logoBase64Ref = useRef<string>("");
   const [schoolInfo] = useState({
     name: "St. Mary's High School",
     motto: "Excellence Through Knowledge",
