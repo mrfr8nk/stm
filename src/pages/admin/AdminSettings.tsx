@@ -445,6 +445,7 @@ const AdminSettings = () => {
                 </p>
                 <p className="text-sm text-muted-foreground">Auto-detected: {getAutoTerm()} | Year: {new Date().getFullYear()}</p>
                 {currentSession && <p className="text-xs text-muted-foreground">{currentSession.start_date} to {currentSession.end_date}</p>}
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">✓ Terms auto-switch daily based on dates. Next year's sessions auto-created in November.</p>
               </div>
             </div>
           </CardContent>
