@@ -37,6 +37,7 @@ const adminFeatures: SearchItem[] = [
   { label: "Staff Gallery", description: "Manage staff profiles & photos", path: "/admin/staff-gallery", icon: Image, keywords: ["photos", "teachers", "staff", "gallery"], category: "Content" },
   { label: "Record Books", description: "View teacher record books", path: "/admin/record-books", icon: BookOpen, keywords: ["records", "books"], category: "Academic" },
   { label: "Student History", description: "View student academic history", path: "/admin/student-history", icon: History, keywords: ["records", "past", "archive", "history"], category: "Academic" },
+  { label: "AI Security", description: "AI-powered threat detection & monitoring", path: "/admin/security", icon: ShieldAlert, keywords: ["security", "threats", "alerts", "suspicious", "anomaly", "hack", "breach"], category: "System" },
   { label: "Settings", description: "System & school settings", path: "/admin/settings", icon: Settings, keywords: ["config", "system", "school name", "preferences", "promote"], category: "System" },
 ];
 
