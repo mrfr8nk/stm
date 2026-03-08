@@ -341,8 +341,12 @@ const ParentReports = () => {
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
               <CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5" /> {profileName}'s Report — {term.replace("_", " ").toUpperCase()} {year}</CardTitle>
               {grades.length > 0 && (
-                <Button onClick={downloadReportCard} variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" /> Download Report Card
+                <Button onClick={downloadReportCard} variant="outline" size="sm" disabled={isGenerating}>
+                  {isGenerating ? (
+                    <><span className="w-4 h-4 mr-2 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin inline-block" /> Generating...</>
+                  ) : (
+                    <><Download className="w-4 h-4 mr-2" /> Download Report Card</>
+                  )}
                 </Button>
               )}
             </CardHeader>
