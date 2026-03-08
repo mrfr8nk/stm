@@ -170,8 +170,22 @@ const TeacherGrades = () => {
   };
 
   // Derive unique subjects and classes for filters
-  const uniqueSubjects = Array.from(new Map(assignments.map(a => [a.subject_id, a.subjects?.name || "Subject"])).entries());
-  const classesForSubject = assignments.filter(a => !selectedSubjectId || a.subject_id === selectedSubjectId);
+  // Build combined subject/class lists including class teacher access
+  const subjectMap = new Map(assignments.map(a => [a.subject_id, a.subjects?.name || "Subject"]));
+  // Class teachers get all subjects
+  if (classTeacherClasses.length > 0) {
+    allSubjects.forEach(s => { if (!subjectMap.has(s.id)) subjectMap.set(s.id, s.name); });
+  }
+  const uniqueSubjects = Array.from(subjectMap.entries());
+
+  const classesForSubject = selectedSubjectId
+    ? [
+        ...assignments.filter(a => a.subject_id === selectedSubjectId),
+        ...classTeacherClasses.filter(c => !assignments.some(a => a.class_id === c.id && a.subject_id === selectedSubjectId)).map(c => ({
+          class_id: c.id, classes: c, subject_id: selectedSubjectId, subjects: allSubjects.find(s => s.id === selectedSubjectId),
+        })),
+      ]
+    : assignments;
   const uniqueClasses = Array.from(new Map(classesForSubject.map(a => [a.class_id, a.classes?.name || "Class"])).entries());
 
   useEffect(() => {
