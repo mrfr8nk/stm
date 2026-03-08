@@ -283,7 +283,8 @@ const AdminUsers = () => {
             </TableCell>
             <TableCell className="font-medium">
               {u.full_name}
-              {u.studentProfile?.is_active === false && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-destructive/10 text-destructive font-medium">TRANSFERRED</span>}
+              {u.is_banned && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-destructive text-destructive-foreground font-medium">BANNED</span>}
+              {u.studentProfile?.is_active === false && !u.is_banned && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-destructive/10 text-destructive font-medium">TRANSFERRED</span>}
             </TableCell>
             <TableCell className="text-sm">{u.email}</TableCell>
             <TableCell className="text-sm">{u.phone || "—"}</TableCell>
