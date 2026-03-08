@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { PAYMENT_METHODS, generateReceipt } from "./FeeConstants";
+import { PAYMENT_METHODS, generateReceipt, methodLabel } from "./FeeConstants";
 import ReceiptImageUpload from "@/components/ReceiptImageUpload";
 
 interface Props {
