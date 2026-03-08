@@ -59,8 +59,11 @@ interface GlobalSearchProps {
 const GlobalSearch = ({ role }: GlobalSearchProps) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(true);
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const features = role === "admin" ? adminFeatures : role === "teacher" ? teacherFeatures : role === "parent" ? studentFeatures : studentFeatures;
 
@@ -72,6 +75,22 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
           f.description.toLowerCase().includes(q) ||
           f.keywords.some(k => k.includes(q));
       });
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    if (value.trim().length > 0) {
+      setIsSearching(true);
+      setShowResults(false);
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        setIsSearching(false);
+        setShowResults(true);
+      }, 400);
+    } else {
+      setIsSearching(false);
+      setShowResults(true);
+    }
+  };
 
   // Keyboard shortcut: Ctrl+K or Cmd+K
   useEffect(() => {
