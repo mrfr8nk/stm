@@ -41,6 +41,11 @@ const AdminSettings = () => {
   const [dbStats, setDbStats] = useState<Record<string, number>>({});
   const [loadingStats, setLoadingStats] = useState(false);
 
+  // Promotion
+  const [promoting, setPromoting] = useState(false);
+  const [promoteConfirmOpen, setPromoteConfirmOpen] = useState(false);
+  const [promotionResult, setPromotionResult] = useState<any>(null);
+
   useEffect(() => {
     if (profile) { setFullName(profile.full_name || ""); setAvatarUrl(profile.avatar_url || null); }
   }, [profile]);
