@@ -26,7 +26,7 @@ const TERMS = [
   { value: "term_3", label: "Term 3" },
 ];
 
-const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, onAdded, classes }: Props) => {
+const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, onAdded, classes, existingRecords = [], onPayExisting }: Props) => {
   const { toast } = useToast();
   const [selectedStudent, setSelectedStudent] = useState("");
   const [selectedTerms, setSelectedTerms] = useState<string[]>([getTermFromDate()]);
