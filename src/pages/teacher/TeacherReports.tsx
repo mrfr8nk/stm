@@ -28,6 +28,15 @@ const getComment = (avg: number) => {
   return "Unsatisfactory. Immediate intervention required.";
 };
 
+const getHeadmasterRemark = (avg: number) => {
+  if (avg >= 80) return "An exemplary student. The school is proud of this achievement.";
+  if (avg >= 70) return "Commendable performance. Continue striving for excellence.";
+  if (avg >= 60) return "A pleasing performance. With more dedication, greater heights can be reached.";
+  if (avg >= 50) return "A fair attempt. More effort and focus are encouraged next term.";
+  if (avg >= 40) return "Performance needs significant improvement. Parents are advised to assist.";
+  return "Very poor performance. A meeting with the parents is recommended.";
+};
+
 const ordinal = (n: number) => n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`;
 
 const getLogoBase64 = async (): Promise<string> => {
