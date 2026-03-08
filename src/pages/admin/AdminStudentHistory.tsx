@@ -84,16 +84,18 @@ const AdminStudentHistory = () => {
     excused: attendance.filter(a => a.status === "excused").length,
   };
 
-  const gradeExportData = grades.map(g => ({
-    Year: g.academic_year, Term: termLabel(g.term), Subject: subjectName(g.subject_id),
-    Mark: g.mark, Grade: g.grade_letter || "—", Comment: g.comment || "",
-  }));
+  const gradeExportHeaders = ["Year", "Term", "Subject", "Mark", "Grade", "Comment"];
+  const gradeExportRows = grades.map(g => [
+    g.academic_year, termLabel(g.term), subjectName(g.subject_id),
+    g.mark, g.grade_letter || "—", g.comment || "",
+  ]);
 
-  const feeExportData = fees.map(f => ({
-    Year: f.academic_year, Term: termLabel(f.term), "Amount Due": f.amount_due,
-    "Amount Paid": f.amount_paid, Balance: f.amount_due - f.amount_paid,
-    Method: f.payment_method || "—", Receipt: f.receipt_number || "—",
-  }));
+  const feeExportHeaders = ["Year", "Term", "Amount Due", "Amount Paid", "Balance", "Method", "Receipt"];
+  const feeExportRows = fees.map(f => [
+    f.academic_year, termLabel(f.term), f.amount_due,
+    f.amount_paid, f.amount_due - f.amount_paid,
+    f.payment_method || "—", f.receipt_number || "—",
+  ]);
 
   if (selected) {
     return (
