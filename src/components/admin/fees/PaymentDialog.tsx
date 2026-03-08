@@ -66,7 +66,7 @@ const PaymentDialog = ({ record, open, onOpenChange, zigRate, getStudentName, ge
               amountDue: Number(record.amount_due),
               amountPaid: newPaid,
               paymentMethod: methodLabel(method),
-              paymentDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+              paymentDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + " at " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
               className: getStudentClass?.(record.student_id),
             },
           },

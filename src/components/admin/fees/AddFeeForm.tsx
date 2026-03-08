@@ -134,7 +134,7 @@ const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, o
                     amountDue: perTermDue,
                     amountPaid: Math.round(perTermPaid * 100) / 100,
                     paymentMethod: methodLabel(paymentMethod),
-                    paymentDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+                    paymentDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + " at " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
                     className,
                   },
                 },
