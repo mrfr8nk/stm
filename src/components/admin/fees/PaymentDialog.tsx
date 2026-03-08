@@ -13,6 +13,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   zigRate: number;
   getStudentName: (id: string) => string;
+  getStudentEmail: (id: string) => string;
+  getStudentClass?: (id: string) => string | undefined;
   onPaid: () => void;
 }
 
