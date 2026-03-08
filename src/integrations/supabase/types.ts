@@ -171,6 +171,7 @@ export type Database = {
           email: string
           form: number
           full_name: string
+          gender: string | null
           guardian_email: string | null
           guardian_name: string | null
           guardian_phone: string | null
@@ -192,6 +193,7 @@ export type Database = {
           email: string
           form?: number
           full_name: string
+          gender?: string | null
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
@@ -213,6 +215,7 @@ export type Database = {
           email?: string
           form?: number
           full_name?: string
+          gender?: string | null
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
@@ -735,30 +738,42 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          banned_at: string | null
+          banned_reason: string | null
           created_at: string
           email: string | null
           full_name: string
+          gender: string | null
           id: string
+          is_banned: boolean
           phone: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
+          banned_at?: string | null
+          banned_reason?: string | null
           created_at?: string
           email?: string | null
           full_name: string
+          gender?: string | null
           id?: string
+          is_banned?: boolean
           phone?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
+          banned_at?: string | null
+          banned_reason?: string | null
           created_at?: string
           email?: string | null
           full_name?: string
+          gender?: string | null
           id?: string
+          is_banned?: boolean
           phone?: string | null
           updated_at?: string
           user_id?: string
@@ -880,6 +895,7 @@ export type Database = {
           emergency_phone: string | null
           enrollment_date: string | null
           form: number
+          gender: string | null
           graduation_status: string | null
           guardian_email: string | null
           guardian_name: string | null
@@ -905,6 +921,7 @@ export type Database = {
           emergency_phone?: string | null
           enrollment_date?: string | null
           form: number
+          gender?: string | null
           graduation_status?: string | null
           guardian_email?: string | null
           guardian_name?: string | null
@@ -930,6 +947,7 @@ export type Database = {
           emergency_phone?: string | null
           enrollment_date?: string | null
           form?: number
+          gender?: string | null
           graduation_status?: string | null
           guardian_email?: string | null
           guardian_name?: string | null
