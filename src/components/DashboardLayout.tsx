@@ -62,6 +62,7 @@ const adminNav: NavItem[] = [
   { label: "Staff Gallery", path: "/admin/staff-gallery", icon: Image },
   { label: "Record Books", path: "/admin/record-books", icon: BookOpen },
   { label: "Student History", path: "/admin/student-history", icon: History },
+  { label: "AI Security", path: "/admin/security", icon: ShieldAlert },
   { label: "Settings", path: "/admin/settings", icon: Settings },
 ];
 
