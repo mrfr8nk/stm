@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Settings2, Save } from "lucide-react";
+import { RefreshCw, Settings2, Save, Check } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface FeeStructure {
   [level: string]: { tuition: number; levy: number };
@@ -16,11 +18,43 @@ interface Props {
 }
 
 const FeeStructureCard = ({ feeStructure, zigRate, onFeeStructureChange, onZigRateChange }: Props) => {
+  const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<FeeStructure>(feeStructure);
+  const [draftRate, setDraftRate] = useState(zigRate);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    onFeeStructureChange(draft);
+  const handleSave = async () => {
+    setSaving(true);
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+
+    // Save both rate and fee structure to system_settings
+    const saves = [
+      supabase.from("system_settings").upsert({
+        key: "zig_rate",
+        value: String(draftRate),
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      } as any, { onConflict: "key" }),
+      supabase.from("system_settings").upsert({
+        key: "fee_structure",
+        value: JSON.stringify(draft),
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      } as any, { onConflict: "key" }),
+    ];
+
+    const results = await Promise.all(saves);
+    const hasError = results.some((r) => r.error);
+
+    if (hasError) {
+      toast({ title: "Error saving settings", variant: "destructive" });
+    } else {
+      onFeeStructureChange(draft);
+      onZigRateChange(draftRate);
+      toast({ title: "Settings Saved", description: `ZIG rate: ${draftRate}, fee structure updated.` });
+    }
+    setSaving(false);
     setEditing(false);
   };
 
@@ -34,8 +68,11 @@ const FeeStructureCard = ({ feeStructure, zigRate, onFeeStructureChange, onZigRa
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-sm">Fee Structure (per term)</CardTitle>
-        <Button variant="ghost" size="sm" onClick={() => { if (editing) handleSave(); else { setDraft({ ...feeStructure }); setEditing(true); } }}>
-          {editing ? <><Save className="w-4 h-4 mr-1" /> Save</> : <><Settings2 className="w-4 h-4 mr-1" /> Edit</>}
+        <Button variant="ghost" size="sm" disabled={saving} onClick={() => {
+          if (editing) handleSave();
+          else { setDraft({ ...feeStructure }); setDraftRate(zigRate); setEditing(true); }
+        }}>
+          {saving ? "Saving..." : editing ? <><Save className="w-4 h-4 mr-1" /> Save</> : <><Settings2 className="w-4 h-4 mr-1" /> Edit</>}
         </Button>
       </CardHeader>
       <CardContent>
@@ -70,11 +107,20 @@ const FeeStructureCard = ({ feeStructure, zigRate, onFeeStructureChange, onZigRa
             );
           })}
         </div>
-        <div className="flex items-center gap-3 mt-4">
+        <div className="flex items-center gap-3 mt-4 p-3 rounded-lg bg-muted/50">
           <RefreshCw className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">Exchange Rate: 1 USD =</span>
-          <Input type="number" value={zigRate} onChange={e => onZigRateChange(Number(e.target.value) || 28.5)} className="w-24" />
+          {editing ? (
+            <Input type="number" value={draftRate} onChange={e => setDraftRate(Number(e.target.value) || 1)} className="w-24" />
+          ) : (
+            <span className="font-bold text-foreground">{zigRate}</span>
+          )}
           <span className="text-sm text-muted-foreground">ZIG</span>
+          {!editing && (
+            <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+              <Check className="w-3 h-3 text-green-600" /> Saved
+            </span>
+          )}
         </div>
       </CardContent>
     </Card>
