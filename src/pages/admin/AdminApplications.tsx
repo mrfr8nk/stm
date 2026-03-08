@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, CheckCircle, XCircle, Clock, Eye, Loader2 } from "lucide-react";
+import { FileText, Search, CheckCircle, XCircle, Clock, Eye, Loader2, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ExportDropdown from "@/components/ExportDropdown";
 
@@ -203,6 +203,11 @@ const AdminApplications = () => {
                       </Button>
                     </>
                   )}
+                  {a.status === "rejected" && (
+                    <Button variant="ghost" size="sm" title="Reconsider" onClick={() => { setSelected(a); setDetailOpen(true); setSelectedClass(""); }}>
+                      <RotateCcw className="w-4 h-4 text-yellow-600" />
+                    </Button>
+                  )}
                 </div>
               </TableCell>
             </TableRow>
@@ -290,8 +295,13 @@ const AdminApplications = () => {
                   <div><span className="text-muted-foreground">Account:</span> {selected.user_id ? "✅ Created" : "❌ No account"}</div>
                 </div>
 
-                {selected.status === "pending" && (
+                {(selected.status === "pending" || selected.status === "rejected") && (
                   <div className="space-y-4 border-t border-border pt-4">
+                    {selected.status === "rejected" && (
+                      <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200">⚠️ This application was previously rejected. You can reconsider and approve it.</p>
+                      </div>
+                    )}
                     <div>
                       <label className="text-sm font-medium text-foreground">Assign to Class (optional)</label>
                       <select
@@ -307,18 +317,20 @@ const AdminApplications = () => {
                     </div>
                     <div className="flex gap-3">
                       <Button className="flex-1" onClick={() => updateStatus(selected.id, "approved")} disabled={approving}>
-                        {approving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Approving...</> : <><CheckCircle className="w-4 h-4 mr-2" /> Approve & Activate Account</>}
+                        {approving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Approving...</> : <><CheckCircle className="w-4 h-4 mr-2" /> {selected.status === "rejected" ? "Reconsider & Approve" : "Approve & Activate Account"}</>}
                       </Button>
-                      <Button variant="destructive" className="flex-1" onClick={() => updateStatus(selected.id, "rejected")} disabled={approving}>
-                        <XCircle className="w-4 h-4 mr-2" /> Reject
-                      </Button>
+                      {selected.status === "pending" && (
+                        <Button variant="destructive" className="flex-1" onClick={() => updateStatus(selected.id, "rejected")} disabled={approving}>
+                          <XCircle className="w-4 h-4 mr-2" /> Reject
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {selected.status === "approved" && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-sm text-green-800">✅ This student's account has been activated. They can log in with their email and password.</p>
+                  <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <p className="text-sm text-green-800 dark:text-green-200">✅ This student's account has been activated. They can log in with their email and password.</p>
                   </div>
                 )}
               </div>
