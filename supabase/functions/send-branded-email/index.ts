@@ -474,6 +474,17 @@ serve(async (req) => {
       subject = `Verification Code - ${SCHOOL}`;
       html = wrap(otpContent(otp, full_name));
 
+    } else if (type === 'fee_receipt') {
+      const { receipt_data } = body;
+      if (!receipt_data) {
+        return new Response(
+          JSON.stringify({ error: 'Receipt data is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      subject = `Fee Payment Receipt ${receipt_data.receiptNumber} - ${SCHOOL}`;
+      html = wrap(receiptContent(receipt_data));
+
     } else {
       return new Response(
         JSON.stringify({ error: 'Invalid email type' }),
