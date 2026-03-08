@@ -59,6 +59,35 @@ const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, o
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else {
       toast({ title: "Fee Record Created", description: receiptNumber ? `Receipt: ${receiptNumber}` : `$${totalDue} billed` });
+
+      // Send receipt email if payment was made
+      if (receiptNumber && paidUSD > 0) {
+        const student = students.find(s => s.user_id === selectedStudent);
+        const sp = studentProfiles.find(s => s.user_id === selectedStudent);
+        const cls = sp?.class_id && classes ? classes.find((c: any) => c.id === sp.class_id) : null;
+        const className = cls ? `${cls.name}${cls.stream ? ` (${cls.stream})` : ""}` : undefined;
+
+        if (student?.email) {
+          supabase.functions.invoke("send-branded-email", {
+            body: {
+              email: student.email,
+              type: "fee_receipt",
+              receipt_data: {
+                studentName: student.full_name,
+                receiptNumber,
+                academicYear: parseInt(feeYear),
+                term,
+                amountDue: totalDue,
+                amountPaid: Math.round(paidUSD * 100) / 100,
+                paymentMethod: methodLabel(paymentMethod),
+                paymentDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+                className,
+              },
+            },
+          }).catch(() => {});
+        }
+      }
+
       setSelectedStudent("");
       setAmountPaid("");
       setNotes("");
