@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import QRCode from "qrcode";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +34,7 @@ const StudentReports = () => {
   const [classGrades, setClassGrades] = useState<any[]>([]);
   const [profileName, setProfileName] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-
+  const logoBase64Ref = useRef<string>("");
   const [schoolInfo] = useState({
     name: "St. Mary's High School",
     motto: "Excellence Through Knowledge",
@@ -45,15 +46,21 @@ const StudentReports = () => {
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      // Check if reports are locked by admin
-      const { data: settingsData } = await supabase.from("system_settings").select("value").eq("key", "reports_locked").single();
-      setReportsLocked(settingsData?.value === "true");
+      // Parallel fetch all independent data
+      const [settingsRes, feesRes, spRes, profRes] = await Promise.all([
+        supabase.from("system_settings").select("value").eq("key", "reports_locked").maybeSingle(),
+        supabase.from("fee_records").select("*").eq("student_id", user.id).is("deleted_at", null),
+        supabase.from("student_profiles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle(),
+      ]);
 
-      // Check fee balance
-      const { data: feesData } = await supabase.from("fee_records").select("*").eq("student_id", user.id).is("deleted_at", null);
+      setReportsLocked(settingsRes.data?.value === "true");
+      setProfileName(profRes.data?.full_name || "");
+
+      // Fee balance
       let totalBal = 0;
       const owingTerms: string[] = [];
-      (feesData || []).forEach(f => {
+      (feesRes.data || []).forEach(f => {
         const bal = Number(f.amount_due) - Number(f.amount_paid);
         if (bal > 0) { totalBal += bal; owingTerms.push(`${f.term.replace("_", " ").toUpperCase()} ${f.academic_year}`); }
       });
@@ -61,52 +68,45 @@ const StudentReports = () => {
       setHasFeeBalance(totalBal > 0);
       setUnpaidTerms([...new Set(owingTerms)]);
 
-      // Student profile
-      const { data: sp } = await supabase.from("student_profiles").select("*").eq("user_id", user.id).single();
+      const sp = spRes.data;
       setStudentProfile(sp);
 
-      // Profile name
-      const { data: prof } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).single();
-      setProfileName(prof?.full_name || "");
+      // Second parallel batch: class-dependent + grades + tests + attendance
+      const promises: Promise<any>[] = [
+        Promise.resolve(supabase.from("grades").select("*, subjects(name, code)")
+          .eq("student_id", user.id).eq("term", term as any).eq("academic_year", year).is("deleted_at", null)),
+        Promise.resolve(supabase.from("monthly_tests").select("*, subjects(name)")
+          .eq("student_id", user.id).eq("academic_year", year).is("deleted_at", null).order("month")),
+        Promise.resolve(supabase.from("attendance").select("*")
+          .eq("student_id", user.id).order("date", { ascending: false }).limit(50)),
+      ];
 
-      // Class info
       if (sp?.class_id) {
-        const { data: cls } = await supabase.from("classes").select("*").eq("id", sp.class_id).single();
-        setClassName(cls?.name || "");
+        promises.push(
+          Promise.resolve(supabase.from("classes").select("*").eq("id", sp.class_id).maybeSingle()),
+          Promise.resolve(supabase.from("grading_scales").select("*").eq("level", sp.level || "o_level")),
+          Promise.resolve(supabase.from("student_profiles").select("user_id").eq("class_id", sp.class_id).eq("is_active", true)),
+        );
+      }
 
-        // Grading scales for class level
-        const level = sp.level || cls?.level;
-        if (level) {
-          const { data: scales } = await supabase.from("grading_scales").select("*").eq("level", level);
-          setGradingScales((scales as GradingScale[]) || []);
-        }
+      const results = await Promise.all(promises);
+      setGrades(results[0].data || []);
+      setMonthlyTests(results[1].data || []);
+      setAttendance(results[2].data || []);
 
-        // Count classmates + fetch all class grades for position calculation
-        const { data: classmates } = await supabase.from("student_profiles").select("user_id").eq("class_id", sp.class_id).eq("is_active", true);
-        setClassStudentCount(classmates?.length || 0);
+      if (sp?.class_id && results.length > 3) {
+        setClassName(results[3].data?.name || "");
+        setGradingScales((results[4].data as GradingScale[]) || []);
+        const classmates = results[5].data || [];
+        setClassStudentCount(classmates.length);
 
-        const classmateIds = (classmates || []).map(c => c.user_id);
+        const classmateIds = classmates.map((c: any) => c.user_id);
         if (classmateIds.length > 0) {
           const { data: allGrades } = await supabase.from("grades").select("student_id, mark")
             .in("student_id", classmateIds).eq("term", term as any).eq("academic_year", year).is("deleted_at", null);
           setClassGrades(allGrades || []);
         }
       }
-
-      // Grades
-      const { data: gradesData } = await supabase.from("grades").select("*, subjects(name, code)")
-        .eq("student_id", user.id).eq("term", term as any).eq("academic_year", year).is("deleted_at", null);
-      setGrades(gradesData || []);
-
-      // Monthly tests
-      const { data: testsData } = await supabase.from("monthly_tests").select("*, subjects(name)")
-        .eq("student_id", user.id).eq("academic_year", year).is("deleted_at", null).order("month");
-      setMonthlyTests(testsData || []);
-
-      // Attendance
-      const { data: attData } = await supabase.from("attendance").select("*")
-        .eq("student_id", user.id).order("date", { ascending: false }).limit(50);
-      setAttendance(attData || []);
     };
     fetchData();
   }, [user, term, year]);
@@ -129,22 +129,20 @@ const StudentReports = () => {
     return "Unsatisfactory. Immediate intervention required.";
   };
 
-  const getLogoBase64 = (): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL("image/png"));
-      };
-      img.onerror = () => resolve("");
-      img.src = schoolLogo;
-    });
-  };
+  // Pre-load logo on mount
+  useEffect(() => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0);
+      logoBase64Ref.current = canvas.toDataURL("image/png");
+    };
+    img.src = schoolLogo;
+  }, []);
 
   const generateReportPDF = async () => {
     if (!canViewReports || grades.length === 0) return null;
@@ -197,8 +195,8 @@ const StudentReports = () => {
     const pw = doc.internal.pageSize.getWidth();
     const primaryColor: [number, number, number] = [10, 61, 98];
 
-    // Try to add logo
-    const logoBase64 = await getLogoBase64();
+    // Use pre-cached logo
+    const logoBase64 = logoBase64Ref.current;
     if (logoBase64) {
       try { doc.addImage(logoBase64, "PNG", 15, 10, 18, 18); } catch {}
       try { doc.addImage(logoBase64, "PNG", pw - 33, 10, 18, 18); } catch {}
@@ -386,21 +384,9 @@ const StudentReports = () => {
 
     y = sigY + 26;
 
-    // QR code section
+    // QR code section - generate locally (fast)
     try {
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(verifyUrl)}`;
-      const qrImg = await new Promise<string>((resolve) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          const c = document.createElement("canvas");
-          c.width = img.width; c.height = img.height;
-          c.getContext("2d")?.drawImage(img, 0, 0);
-          resolve(c.toDataURL("image/png"));
-        };
-        img.onerror = () => resolve("");
-        img.src = qrUrl;
-      });
+      const qrImg = await QRCode.toDataURL(verifyUrl, { width: 200, margin: 1 });
 
       if (qrImg) {
         doc.setDrawColor(220);
