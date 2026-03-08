@@ -379,6 +379,74 @@ function receiptContent(data: {
   ].join('\n');
 }
 
+function parentLinkContent(data: any): string {
+  const { parentName, studentName, role, className, date } = data;
+  const isParentView = role === 'parent';
+  return [
+    '<h2 style="color:#2c3e50;font-size:22px;',
+    'font-weight:600;margin:0 0 16px;',
+    'text-align:center;">',
+    '&#128279; Parent-Student Link Confirmed</h2>',
+    '<p style="color:#555;font-size:15px;',
+    'line-height:1.7;margin:0 0 24px;',
+    'text-align:center;">',
+    isParentView
+      ? `You have successfully linked to <strong>${studentName}</strong>'s account.`
+      : `<strong>${parentName}</strong> has linked to your account as a parent/guardian.`,
+    '</p>',
+    // Info card
+    '<div style="background:#f0f7ff;',
+    'border:1px solid #d0e3f7;',
+    'border-radius:12px;padding:24px;',
+    'margin:0 0 24px;">',
+    '<table width="100%" cellpadding="0" cellspacing="0">',
+    '<tr><td style="padding:8px 0;color:#666;',
+    'font-size:14px;">Parent/Guardian:</td>',
+    `<td style="padding:8px 0;color:#2c3e50;`,
+    `font-size:14px;font-weight:600;`,
+    `text-align:right;">${parentName}</td></tr>`,
+    '<tr><td style="padding:8px 0;color:#666;',
+    'font-size:14px;">Student:</td>',
+    `<td style="padding:8px 0;color:#2c3e50;`,
+    `font-size:14px;font-weight:600;`,
+    `text-align:right;">${studentName}</td></tr>`,
+    className ? [
+      '<tr><td style="padding:8px 0;color:#666;',
+      'font-size:14px;">Class:</td>',
+      `<td style="padding:8px 0;color:#2c3e50;`,
+      `font-size:14px;font-weight:600;`,
+      `text-align:right;">${className}</td></tr>`,
+    ].join('\n') : '',
+    '<tr><td style="padding:8px 0;color:#666;',
+    'font-size:14px;">Linked on:</td>',
+    `<td style="padding:8px 0;color:#2c3e50;`,
+    `font-size:14px;font-weight:600;`,
+    `text-align:right;">${date}</td></tr>`,
+    '</table></div>',
+    // Access info
+    '<div style="background:#e8f5e9;',
+    'border:1px solid #c8e6c9;',
+    'border-radius:12px;padding:16px;',
+    'margin:0 0 24px;">',
+    '<p style="color:#2e7d32;font-size:14px;',
+    'font-weight:600;margin:0 0 8px;">',
+    isParentView ? '&#9989; You can now:' : '&#9989; The parent can now:',
+    '</p>',
+    '<ul style="color:#555;font-size:13px;',
+    'line-height:1.8;margin:0;padding-left:20px;">',
+    '<li>View academic grades and reports</li>',
+    '<li>Monitor attendance records</li>',
+    '<li>Track fee payments and balances</li>',
+    '<li>Receive important notifications</li>',
+    '</ul></div>',
+    '<div style="text-align:center;">',
+    '<p style="color:#888;font-size:12px;margin:0;">',
+    'If you did not authorize this,',
+    ' contact school admin immediately.</p>',
+    '</div>',
+  ].join('\n');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -484,6 +552,17 @@ serve(async (req) => {
       }
       subject = `Fee Payment Receipt ${receipt_data.receiptNumber} - ${SCHOOL}`;
       html = wrap(receiptContent(receipt_data));
+
+    } else if (type === 'parent_link') {
+      const { link_data } = body;
+      if (!link_data) {
+        return new Response(
+          JSON.stringify({ error: 'Link data is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      subject = `Parent-Student Account Linked - ${SCHOOL}`;
+      html = wrap(parentLinkContent(link_data));
 
     } else {
       return new Response(
