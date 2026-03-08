@@ -10,6 +10,7 @@ import AvatarUpload from "@/components/AvatarUpload";
 import PhoneInput, { normalizePhone } from "@/components/PhoneInput";
 import { Settings, Unlink, UserPlus, Link2, Loader2, AlertCircle, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import BiometricEnrollment from "@/components/BiometricEnrollment";
 
 const ParentSettings = () => {
   const { user, profile } = useAuth();
@@ -277,6 +278,8 @@ const ParentSettings = () => {
             </Button>
           </CardContent>
         </Card>
+
+        <BiometricEnrollment />
 
         {/* Linked Children Card */}
         <Card>

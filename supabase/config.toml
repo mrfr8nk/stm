@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.security-scan]
 verify_jwt = false
+
+[functions.admin-delete-user]
+verify_jwt = false
+
+[functions.passkey-auth]
+verify_jwt = false

@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import AvatarUpload from "@/components/AvatarUpload";
 import ThemeToggle from "@/components/ThemeToggle";
 import SignatureManager from "@/components/SignatureManager";
+import BiometricEnrollment from "@/components/BiometricEnrollment";
 
 const AdminSettings = () => {
   const { user, profile } = useAuth();
@@ -326,6 +327,8 @@ const AdminSettings = () => {
             <Button onClick={handleSaveProfile} disabled={saving}><Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save Changes"}</Button>
           </CardContent>
         </Card>
+
+        <BiometricEnrollment />
 
         {/* Theme */}
         <Card>
