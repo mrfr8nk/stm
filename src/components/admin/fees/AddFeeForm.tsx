@@ -17,7 +17,7 @@ interface Props {
   classes?: any[];
 }
 
-const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, onAdded }: Props) => {
+const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, onAdded, classes }: Props) => {
   const { toast } = useToast();
   const [selectedStudent, setSelectedStudent] = useState("");
   const [term, setTerm] = useState(getTermFromDate());
