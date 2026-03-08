@@ -7,7 +7,7 @@ import {
   Search, Home, Users, FileText, GraduationCap, BookOpen, Key,
   BarChart3, Bell, DollarSign, Receipt, Settings, ClipboardCheck,
   MessageSquare, Trophy, Newspaper, Image, History, User, Sparkles,
-  ArrowRight, Command
+  ArrowRight, Command, ShieldAlert
 } from "lucide-react";
 
 interface SearchItem {
