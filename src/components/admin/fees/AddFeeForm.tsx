@@ -14,6 +14,7 @@ interface Props {
   zigRate: number;
   years: number[];
   onAdded: () => void;
+  classes?: any[];
 }
 
 const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, onAdded }: Props) => {
