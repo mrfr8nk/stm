@@ -72,20 +72,20 @@ const StudentReports = () => {
       setStudentProfile(sp);
 
       // Second parallel batch: class-dependent + grades + tests + attendance
-      const promises: Promise<any>[] = [
-        supabase.from("grades").select("*, subjects(name, code)")
-          .eq("student_id", user.id).eq("term", term as any).eq("academic_year", year).is("deleted_at", null),
-        supabase.from("monthly_tests").select("*, subjects(name)")
-          .eq("student_id", user.id).eq("academic_year", year).is("deleted_at", null).order("month"),
-        supabase.from("attendance").select("*")
-          .eq("student_id", user.id).order("date", { ascending: false }).limit(50),
-      ];
+      const gradesPromise = supabase.from("grades").select("*, subjects(name, code)")
+        .eq("student_id", user.id).eq("term", term as any).eq("academic_year", year).is("deleted_at", null).then(r => r);
+      const testsPromise = supabase.from("monthly_tests").select("*, subjects(name)")
+        .eq("student_id", user.id).eq("academic_year", year).is("deleted_at", null).order("month").then(r => r);
+      const attPromise = supabase.from("attendance").select("*")
+        .eq("student_id", user.id).order("date", { ascending: false }).limit(50).then(r => r);
+
+      const promises: Promise<any>[] = [gradesPromise, testsPromise, attPromise];
 
       if (sp?.class_id) {
         promises.push(
-          supabase.from("classes").select("*").eq("id", sp.class_id).maybeSingle(),
-          supabase.from("grading_scales").select("*").eq("level", sp.level || "o_level"),
-          supabase.from("student_profiles").select("user_id").eq("class_id", sp.class_id).eq("is_active", true),
+          supabase.from("classes").select("*").eq("id", sp.class_id).maybeSingle().then(r => r),
+          supabase.from("grading_scales").select("*").eq("level", sp.level || "o_level").then(r => r),
+          supabase.from("student_profiles").select("user_id").eq("class_id", sp.class_id).eq("is_active", true).then(r => r),
         );
       }
 
