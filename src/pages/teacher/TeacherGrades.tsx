@@ -33,12 +33,27 @@ const TeacherGrades = () => {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [gradingScales, setGradingScales] = useState<GradingScale[]>([]);
+  const [classTeacherClasses, setClassTeacherClasses] = useState<any[]>([]);
+  const [classTeacherClassIds, setClassTeacherClassIds] = useState<Set<string>>(new Set());
+  const [allSubjects, setAllSubjects] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("teacher_assignments").select("*, classes(*), subjects(*)")
-      .eq("teacher_id", user.id).then(({ data }) => setAssignments(data || []));
+    Promise.all([
+      supabase.from("teacher_assignments").select("*, classes(*), subjects(*)").eq("teacher_id", user.id),
+      supabase.from("classes").select("*").eq("class_teacher_id", user.id).is("deleted_at", null),
+    ]).then(([assignRes, ctRes]) => {
+      setAssignments(assignRes.data || []);
+      setClassTeacherClasses(ctRes.data || []);
+      setClassTeacherClassIds(new Set((ctRes.data || []).map((c: any) => c.id)));
+    });
   }, [user]);
+
+  // Load all subjects for class teachers
+  useEffect(() => {
+    if (classTeacherClasses.length === 0) return;
+    supabase.from("subjects").select("*").is("deleted_at", null).then(({ data }) => setAllSubjects(data || []));
+  }, [classTeacherClasses]);
 
   // Fetch grading scales when assignment changes
   useEffect(() => {
