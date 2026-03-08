@@ -32,6 +32,7 @@ const StudentReports = () => {
   const [classStudentCount, setClassStudentCount] = useState(0);
   const [classGrades, setClassGrades] = useState<any[]>([]);
   const [profileName, setProfileName] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [schoolInfo] = useState({
     name: "St. Mary's High School",
@@ -450,22 +451,32 @@ const StudentReports = () => {
   };
 
   const downloadReportCard = async () => {
-    const result = await generateReportPDF();
-    if (!result) return;
-    const filename = `Report_Card_${profileName.replace(/\s+/g, "_")}_${term.toUpperCase()}_${year}.pdf`;
-    result.doc.save(filename);
+    setIsGenerating(true);
+    try {
+      const result = await generateReportPDF();
+      if (!result) return;
+      const filename = `Report_Card_${profileName.replace(/\s+/g, "_")}_${term.toUpperCase()}_${year}.pdf`;
+      result.doc.save(filename);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const printReportCard = async () => {
-    const result = await generateReportPDF();
-    if (!result) return;
-    const pdfBlob = result.doc.output("blob");
-    const url = URL.createObjectURL(pdfBlob);
-    const w = window.open(url, "_blank");
-    if (w) {
-      w.onload = () => { w.print(); };
+    setIsGenerating(true);
+    try {
+      const result = await generateReportPDF();
+      if (!result) return;
+      const pdfBlob = result.doc.output("blob");
+      const url = URL.createObjectURL(pdfBlob);
+      const w = window.open(url, "_blank");
+      if (w) {
+        w.onload = () => { w.print(); };
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } finally {
+      setIsGenerating(false);
     }
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
   };
 
   return (
@@ -557,10 +568,14 @@ const StudentReports = () => {
                     <CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5" /> {term.replace("_", " ").toUpperCase()} {year} Report Card</CardTitle>
                     {grades.length > 0 && (
                       <div className="flex gap-2">
-                        <Button onClick={downloadReportCard} variant="default" size="sm">
-                          <Download className="w-4 h-4 mr-2" /> Download PDF
+                        <Button onClick={downloadReportCard} variant="default" size="sm" disabled={isGenerating}>
+                          {isGenerating ? (
+                            <><span className="w-4 h-4 mr-2 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin inline-block" /> Generating...</>
+                          ) : (
+                            <><Download className="w-4 h-4 mr-2" /> Download PDF</>
+                          )}
                         </Button>
-                        <Button onClick={printReportCard} variant="outline" size="sm">
+                        <Button onClick={printReportCard} variant="outline" size="sm" disabled={isGenerating}>
                           <Printer className="w-4 h-4 mr-2" /> Print
                         </Button>
                       </div>

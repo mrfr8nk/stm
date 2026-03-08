@@ -27,6 +27,7 @@ const ParentReports = () => {
   const [term, setTerm] = useState("term_1");
   const [year, setYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [schoolInfo] = useState({
     name: "St. Mary's High School",
@@ -131,6 +132,8 @@ const ParentReports = () => {
 
   const downloadReportCard = async () => {
     if (!canView || grades.length === 0) return;
+    setIsGenerating(true);
+    try {
     const logoBase64 = await getLogoBase64();
     const level = studentProfile?.level || "o_level";
     const totalMark = grades.reduce((sum, g) => sum + Number(g.mark), 0);
@@ -285,6 +288,9 @@ const ParentReports = () => {
 
     const w = window.open("", "_blank");
     if (w) { w.document.write(html); w.document.close(); }
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -335,8 +341,12 @@ const ParentReports = () => {
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
               <CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5" /> {profileName}'s Report — {term.replace("_", " ").toUpperCase()} {year}</CardTitle>
               {grades.length > 0 && (
-                <Button onClick={downloadReportCard} variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" /> Download Report Card
+                <Button onClick={downloadReportCard} variant="outline" size="sm" disabled={isGenerating}>
+                  {isGenerating ? (
+                    <><span className="w-4 h-4 mr-2 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin inline-block" /> Generating...</>
+                  ) : (
+                    <><Download className="w-4 h-4 mr-2" /> Download Report Card</>
+                  )}
                 </Button>
               )}
             </CardHeader>
