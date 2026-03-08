@@ -288,6 +288,9 @@ const ParentReports = () => {
 
     const w = window.open("", "_blank");
     if (w) { w.document.write(html); w.document.close(); }
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
