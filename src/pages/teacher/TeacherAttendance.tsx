@@ -46,7 +46,7 @@ const TeacherAttendance = () => {
       if (spData && spData.length > 0) {
         const userIds = spData.map(s => s.user_id);
         const { data: profilesData } = await supabase.from("profiles")
-          .select("user_id, full_name").in("user_id", userIds);
+          .select("user_id, full_name, email").in("user_id", userIds);
         const profileMap: Record<string, any> = {};
         (profilesData || []).forEach(p => { profileMap[p.user_id] = p; });
         setStudents(spData.map(s => ({ ...s, profiles: profileMap[s.user_id] || null })));
