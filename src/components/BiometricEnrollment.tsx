@@ -66,7 +66,11 @@ const BiometricEnrollment = () => {
       toast({ title: "Biometric Registered! 🎉", description: "You can now sign in with fingerprint or face scan." });
       fetchPasskeys();
     } catch (err: any) {
-      if (err.name !== "NotAllowedError") {
+      if (err.name === "NotAllowedError") {
+        toast({ title: "Biometric Cancelled", description: "The biometric prompt was dismissed or blocked. Try again and use your fingerprint or face when prompted.", variant: "destructive" });
+      } else if (err.name === "SecurityError") {
+        toast({ title: "Not Supported Here", description: "Biometric registration requires opening the app directly in your browser (not in an embedded preview). Try opening the published URL on your phone.", variant: "destructive" });
+      } else {
         toast({ title: "Registration Failed", description: err.message, variant: "destructive" });
       }
     } finally {
