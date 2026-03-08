@@ -10,6 +10,7 @@ import {
   DollarSign, User, Receipt, MessageSquare, Trophy, Newspaper, Image, History, ShieldAlert
 } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
+import NotificationBell from "@/components/NotificationBell";
 
 interface NavItem {
   label: string;
