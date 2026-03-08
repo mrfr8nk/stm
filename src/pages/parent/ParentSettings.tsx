@@ -180,21 +180,36 @@ const ParentSettings = () => {
 
       const linkData = { parentName, studentName, className, date: linkDate };
 
-      // Send branded email to student
+      // Send branded emails to both student and parent
+      let emailsSent = 0;
+      let emailsFailed = 0;
+
       if (studentEmail) {
-        supabase.functions.invoke("send-branded-email", {
-          body: { email: studentEmail, type: "parent_link", link_data: { ...linkData, role: "student" } },
-        }).catch(() => {});
+        try {
+          const { error: emailErr } = await supabase.functions.invoke("send-branded-email", {
+            body: { email: studentEmail, type: "parent_link", link_data: { ...linkData, role: "student" } },
+          });
+          if (emailErr) { emailsFailed++; console.error("Student email failed:", emailErr); }
+          else emailsSent++;
+        } catch { emailsFailed++; }
       }
 
-      // Send branded email to parent
       if (user?.email) {
-        supabase.functions.invoke("send-branded-email", {
-          body: { email: user.email, type: "parent_link", link_data: { ...linkData, role: "parent" } },
-        }).catch(() => {});
+        try {
+          const { error: emailErr } = await supabase.functions.invoke("send-branded-email", {
+            body: { email: user.email, type: "parent_link", link_data: { ...linkData, role: "parent" } },
+          });
+          if (emailErr) { emailsFailed++; console.error("Parent email failed:", emailErr); }
+          else emailsSent++;
+        } catch { emailsFailed++; }
       }
 
-      toast({ title: "Child Linked!", description: "Both you and the student have been notified via email." });
+      toast({
+        title: "Child Linked!",
+        description: emailsFailed > 0
+          ? `Link successful! ${emailsSent} email(s) sent, ${emailsFailed} failed (may be blocked by spam filters).`
+          : "Both you and the student have been notified via email.",
+      });
       setChildStudentId("");
       setChildLookup(null);
       setLinkDialogOpen(false);
