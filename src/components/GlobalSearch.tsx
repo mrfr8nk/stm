@@ -1,12 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import {
   Search, Home, Users, FileText, GraduationCap, BookOpen, Key,
   BarChart3, Bell, DollarSign, Receipt, Settings, ClipboardCheck,
-  MessageSquare, Trophy, Newspaper, Image, History
+  MessageSquare, Trophy, Newspaper, Image, History, User, Sparkles,
+  ArrowRight, Command
 } from "lucide-react";
 
 interface SearchItem {
@@ -15,59 +16,65 @@ interface SearchItem {
   path: string;
   icon: React.ElementType;
   keywords: string[];
+  category: string;
 }
 
 const adminFeatures: SearchItem[] = [
-  { label: "Dashboard", description: "Overview & statistics", path: "/admin", icon: Home, keywords: ["home", "overview", "stats", "summary"] },
-  { label: "Users", description: "Manage students, teachers & admins", path: "/admin/users", icon: Users, keywords: ["students", "teachers", "accounts", "people", "staff", "ban"] },
-  { label: "Applications", description: "Review admission applications", path: "/admin/applications", icon: FileText, keywords: ["admissions", "apply", "enroll", "new students"] },
-  { label: "Classes", description: "Manage classes & streams", path: "/admin/classes", icon: GraduationCap, keywords: ["forms", "streams", "class teacher", "assign"] },
-  { label: "Subjects", description: "Manage subjects & curriculum", path: "/admin/subjects", icon: BookOpen, keywords: ["curriculum", "courses", "compulsory", "optional"] },
-  { label: "Access Codes", description: "Generate signup codes", path: "/admin/codes", icon: Key, keywords: ["registration", "invite", "signup", "codes"] },
-  { label: "Grades Overview", description: "View all student grades", path: "/admin/grades", icon: BarChart3, keywords: ["marks", "results", "performance", "academic"] },
-  { label: "Rankings", description: "Student & class rankings", path: "/admin/rankings", icon: Trophy, keywords: ["rank", "position", "top", "leaderboard"] },
-  { label: "Messages", description: "Direct messaging", path: "/admin/messages", icon: MessageSquare, keywords: ["chat", "dm", "inbox", "conversation"] },
-  { label: "Announcements", description: "Create & manage announcements", path: "/admin/announcements", icon: Bell, keywords: ["notice", "news", "broadcast", "pin"] },
-  { label: "Fee Management", description: "Fees, payments & receipts", path: "/admin/fees", icon: DollarSign, keywords: ["payment", "receipt", "balance", "tuition", "money", "barcode", "scan"] },
-  { label: "Finance & Petty Cash", description: "Track expenses & petty cash", path: "/admin/finance", icon: Receipt, keywords: ["expenses", "cash", "budget", "spending"] },
-  { label: "Homepage Updates", description: "Manage homepage content", path: "/admin/homepage", icon: Newspaper, keywords: ["website", "content", "news", "updates"] },
-  { label: "Staff Gallery", description: "Manage staff profiles & photos", path: "/admin/staff-gallery", icon: Image, keywords: ["photos", "teachers", "staff", "gallery"] },
-  { label: "Student History", description: "View student academic history", path: "/admin/student-history", icon: History, keywords: ["records", "past", "archive", "history"] },
-  { label: "Settings", description: "System & school settings", path: "/admin/settings", icon: Settings, keywords: ["config", "system", "school name", "preferences", "promote"] },
+  { label: "Dashboard", description: "Overview & statistics", path: "/admin", icon: Home, keywords: ["home", "overview", "stats", "summary"], category: "Navigation" },
+  { label: "Users", description: "Manage students, teachers & admins", path: "/admin/users", icon: Users, keywords: ["students", "teachers", "accounts", "people", "staff", "ban"], category: "Management" },
+  { label: "Staff Management", description: "Manage staff profiles", path: "/admin/staff-management", icon: User, keywords: ["staff", "teachers", "employees"], category: "Management" },
+  { label: "Applications", description: "Review admission applications", path: "/admin/applications", icon: FileText, keywords: ["admissions", "apply", "enroll", "new students"], category: "Management" },
+  { label: "Classes", description: "Manage classes & streams", path: "/admin/classes", icon: GraduationCap, keywords: ["forms", "streams", "class teacher", "assign"], category: "Academic" },
+  { label: "Subjects", description: "Manage subjects & curriculum", path: "/admin/subjects", icon: BookOpen, keywords: ["curriculum", "courses", "compulsory", "optional"], category: "Academic" },
+  { label: "Access Codes", description: "Generate signup codes", path: "/admin/codes", icon: Key, keywords: ["registration", "invite", "signup", "codes"], category: "Management" },
+  { label: "Grades Overview", description: "View all student grades", path: "/admin/grades", icon: BarChart3, keywords: ["marks", "results", "performance", "academic"], category: "Academic" },
+  { label: "Rankings", description: "Student & class rankings", path: "/admin/rankings", icon: Trophy, keywords: ["rank", "position", "top", "leaderboard"], category: "Academic" },
+  { label: "Messages", description: "Direct messaging", path: "/admin/messages", icon: MessageSquare, keywords: ["chat", "dm", "inbox", "conversation"], category: "Communication" },
+  { label: "Announcements", description: "Create & manage announcements", path: "/admin/announcements", icon: Bell, keywords: ["notice", "news", "broadcast", "pin"], category: "Communication" },
+  { label: "Fee Management", description: "Fees, payments & receipts", path: "/admin/fees", icon: DollarSign, keywords: ["payment", "receipt", "balance", "tuition", "money", "barcode", "scan"], category: "Finance" },
+  { label: "Finance & Petty Cash", description: "Track expenses & petty cash", path: "/admin/finance", icon: Receipt, keywords: ["expenses", "cash", "budget", "spending"], category: "Finance" },
+  { label: "Homepage Updates", description: "Manage homepage content", path: "/admin/homepage", icon: Newspaper, keywords: ["website", "content", "news", "updates"], category: "Content" },
+  { label: "Staff Gallery", description: "Manage staff profiles & photos", path: "/admin/staff-gallery", icon: Image, keywords: ["photos", "teachers", "staff", "gallery"], category: "Content" },
+  { label: "Record Books", description: "View teacher record books", path: "/admin/record-books", icon: BookOpen, keywords: ["records", "books"], category: "Academic" },
+  { label: "Student History", description: "View student academic history", path: "/admin/student-history", icon: History, keywords: ["records", "past", "archive", "history"], category: "Academic" },
+  { label: "Settings", description: "System & school settings", path: "/admin/settings", icon: Settings, keywords: ["config", "system", "school name", "preferences", "promote"], category: "System" },
 ];
 
 const teacherFeatures: SearchItem[] = [
-  { label: "Dashboard", description: "Overview", path: "/teacher", icon: Home, keywords: ["home"] },
-  { label: "My Classes", description: "View assigned classes", path: "/teacher/classes", icon: Users, keywords: ["students", "class list"] },
-  { label: "Set Grades", description: "Enter student grades", path: "/teacher/grades", icon: BookOpen, keywords: ["marks", "results"] },
-  { label: "Monthly Tests", description: "Record monthly test marks", path: "/teacher/monthly-tests", icon: BarChart3, keywords: ["tests", "marks"] },
-  { label: "Rankings", description: "Student rankings", path: "/teacher/rankings", icon: Trophy, keywords: ["rank", "position", "top"] },
-  { label: "Attendance", description: "Mark student attendance", path: "/teacher/attendance", icon: ClipboardCheck, keywords: ["present", "absent"] },
-  { label: "Report Cards", description: "Generate report cards", path: "/teacher/reports", icon: FileText, keywords: ["reports"] },
-  { label: "Messages", description: "Direct messaging", path: "/teacher/messages", icon: MessageSquare, keywords: ["chat", "dm", "inbox"] },
-  { label: "Announcements", description: "View & create announcements", path: "/teacher/announcements", icon: Bell, keywords: ["notice"] },
-  { label: "Settings", description: "Profile settings", path: "/teacher/profile", icon: Settings, keywords: ["profile"] },
+  { label: "Dashboard", description: "Overview", path: "/teacher", icon: Home, keywords: ["home"], category: "Navigation" },
+  { label: "My Classes", description: "View assigned classes", path: "/teacher/classes", icon: Users, keywords: ["students", "class list"], category: "Academic" },
+  { label: "Set Grades", description: "Enter student grades", path: "/teacher/grades", icon: BookOpen, keywords: ["marks", "results"], category: "Academic" },
+  { label: "Monthly Tests", description: "Record monthly test marks", path: "/teacher/monthly-tests", icon: BarChart3, keywords: ["tests", "marks"], category: "Academic" },
+  { label: "Rankings", description: "Student rankings", path: "/teacher/rankings", icon: Trophy, keywords: ["rank", "position", "top"], category: "Academic" },
+  { label: "Attendance", description: "Mark student attendance", path: "/teacher/attendance", icon: ClipboardCheck, keywords: ["present", "absent"], category: "Academic" },
+  { label: "Report Cards", description: "Generate report cards", path: "/teacher/reports", icon: FileText, keywords: ["reports"], category: "Academic" },
+  { label: "Messages", description: "Direct messaging", path: "/teacher/messages", icon: MessageSquare, keywords: ["chat", "dm", "inbox"], category: "Communication" },
+  { label: "Announcements", description: "View & create announcements", path: "/teacher/announcements", icon: Bell, keywords: ["notice"], category: "Communication" },
+  { label: "Record Book", description: "Custom record keeping", path: "/teacher/record-book", icon: BookOpen, keywords: ["records"], category: "Academic" },
+  { label: "Settings", description: "Profile settings", path: "/teacher/profile", icon: Settings, keywords: ["profile"], category: "System" },
 ];
 
 const studentFeatures: SearchItem[] = [
-  { label: "Dashboard", description: "Overview", path: "/student", icon: Home, keywords: ["home"] },
-  { label: "My Grades", description: "View your grades", path: "/student/grades", icon: BookOpen, keywords: ["marks", "results"] },
-  { label: "Rankings", description: "View rankings", path: "/student/rankings", icon: Trophy, keywords: ["rank", "position", "top"] },
-  { label: "Attendance", description: "View attendance record", path: "/student/attendance", icon: ClipboardCheck, keywords: ["present", "absent"] },
-  { label: "Report Cards", description: "Download report cards", path: "/student/reports", icon: FileText, keywords: ["reports"] },
-  { label: "Study Pal AI", description: "AI study assistant", path: "/student/study-pal", icon: BookOpen, keywords: ["ai", "study", "help", "tutor"] },
-  { label: "Messages", description: "Direct messaging", path: "/student/messages", icon: MessageSquare, keywords: ["chat", "dm", "inbox"] },
-  { label: "Announcements", description: "View announcements", path: "/student/announcements", icon: Bell, keywords: ["notice"] },
-  { label: "Fees", description: "View fee records", path: "/student/fees", icon: DollarSign, keywords: ["payment", "balance"] },
-  { label: "Settings", description: "Profile settings", path: "/student/profile", icon: Settings, keywords: ["profile"] },
+  { label: "Dashboard", description: "Overview", path: "/student", icon: Home, keywords: ["home"], category: "Navigation" },
+  { label: "My Grades", description: "View your grades", path: "/student/grades", icon: BookOpen, keywords: ["marks", "results"], category: "Academic" },
+  { label: "Rankings", description: "View rankings", path: "/student/rankings", icon: Trophy, keywords: ["rank", "position", "top"], category: "Academic" },
+  { label: "Attendance", description: "View attendance record", path: "/student/attendance", icon: ClipboardCheck, keywords: ["present", "absent"], category: "Academic" },
+  { label: "Report Cards", description: "Download report cards", path: "/student/reports", icon: FileText, keywords: ["reports"], category: "Academic" },
+  { label: "Study Pal AI", description: "AI study assistant", path: "/student/study-pal", icon: Sparkles, keywords: ["ai", "study", "help", "tutor"], category: "AI Tools" },
+  { label: "Messages", description: "Direct messaging", path: "/student/messages", icon: MessageSquare, keywords: ["chat", "dm", "inbox"], category: "Communication" },
+  { label: "Announcements", description: "View announcements", path: "/student/announcements", icon: Bell, keywords: ["notice"], category: "Communication" },
+  { label: "Fees", description: "View fee records", path: "/student/fees", icon: DollarSign, keywords: ["payment", "balance"], category: "Finance" },
+  { label: "Settings", description: "Profile settings", path: "/student/profile", icon: Settings, keywords: ["profile"], category: "System" },
 ];
 
 const parentFeatures: SearchItem[] = [
-  { label: "Dashboard", description: "Overview", path: "/parent", icon: Home, keywords: ["home"] },
-  { label: "Grades", description: "View child's grades", path: "/parent/grades", icon: BookOpen, keywords: ["marks", "results"] },
-  { label: "Attendance", description: "View child's attendance", path: "/parent/attendance", icon: ClipboardCheck, keywords: ["present", "absent"] },
-  { label: "Fees", description: "View fee records", path: "/parent/fees", icon: DollarSign, keywords: ["payment", "balance"] },
-  { label: "Messages", description: "Direct messaging", path: "/parent/messages", icon: MessageSquare, keywords: ["chat", "dm", "inbox"] },
+  { label: "Dashboard", description: "Overview", path: "/parent", icon: Home, keywords: ["home"], category: "Navigation" },
+  { label: "Grades", description: "View child's grades", path: "/parent/grades", icon: BookOpen, keywords: ["marks", "results"], category: "Academic" },
+  { label: "Report Cards", description: "View report cards", path: "/parent/reports", icon: FileText, keywords: ["reports"], category: "Academic" },
+  { label: "Attendance", description: "View child's attendance", path: "/parent/attendance", icon: ClipboardCheck, keywords: ["present", "absent"], category: "Academic" },
+  { label: "Fees", description: "View fee records", path: "/parent/fees", icon: DollarSign, keywords: ["payment", "balance"], category: "Finance" },
+  { label: "Messages", description: "Direct messaging", path: "/parent/messages", icon: MessageSquare, keywords: ["chat", "dm", "inbox"], category: "Communication" },
+  { label: "Settings", description: "Account settings", path: "/parent/settings", icon: Settings, keywords: ["profile"], category: "System" },
 ];
 
 interface GlobalSearchProps {
@@ -77,11 +84,10 @@ interface GlobalSearchProps {
 const GlobalSearch = ({ role }: GlobalSearchProps) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [showResults, setShowResults] = useState(true);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const listRef = useRef<HTMLDivElement>(null);
 
   const features = role === "admin" ? adminFeatures : role === "teacher" ? teacherFeatures : role === "parent" ? parentFeatures : studentFeatures;
 
@@ -91,24 +97,22 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
         const q = query.toLowerCase();
         return f.label.toLowerCase().includes(q) ||
           f.description.toLowerCase().includes(q) ||
-          f.keywords.some(k => k.includes(q));
+          f.keywords.some(k => k.includes(q)) ||
+          f.category.toLowerCase().includes(q);
       });
 
-  const handleQueryChange = (value: string) => {
-    setQuery(value);
-    if (value.trim().length > 0) {
-      setIsSearching(true);
-      setShowResults(false);
-      clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        setIsSearching(false);
-        setShowResults(true);
-      }, 400);
-    } else {
-      setIsSearching(false);
-      setShowResults(true);
-    }
-  };
+  // Group by category
+  const grouped = filtered.reduce<Record<string, SearchItem[]>>((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item);
+    return acc;
+  }, {});
+
+  const flatFiltered = Object.values(grouped).flat();
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query]);
 
   // Keyboard shortcut: Ctrl+K or Cmd+K
   useEffect(() => {
@@ -126,15 +130,43 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
     else {
       setQuery("");
-      setIsSearching(false);
-      setShowResults(true);
+      setSelectedIndex(0);
     }
   }, [open]);
 
-  const go = (path: string) => {
+  const go = useCallback((path: string) => {
     navigate(path);
     setOpen(false);
+  }, [navigate]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex(prev => Math.min(prev + 1, flatFiltered.length - 1));
+      scrollToSelected(selectedIndex + 1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex(prev => Math.max(prev - 1, 0));
+      scrollToSelected(selectedIndex - 1);
+    } else if (e.key === "Enter" && flatFiltered[selectedIndex]) {
+      go(flatFiltered[selectedIndex].path);
+    }
   };
+
+  const scrollToSelected = (index: number) => {
+    const el = listRef.current?.children[index] as HTMLElement | undefined;
+    el?.scrollIntoView({ block: "nearest" });
+  };
+
+  // Quick suggestions based on time of day
+  const getQuickSuggestion = () => {
+    const hour = new Date().getHours();
+    if (hour < 10) return "Good morning! Start with attendance or dashboard.";
+    if (hour < 14) return "Try checking grades or messages.";
+    return "Review reports or announcements before you go.";
+  };
+
+  let itemIndex = -1;
 
   return (
     <>
@@ -143,52 +175,96 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-muted/50 text-muted-foreground text-sm hover:bg-muted transition-colors max-w-xs w-full sm:w-64"
       >
         <Search className="w-4 h-4 shrink-0" />
-        <span className="truncate">Search features...</span>
-        <kbd className="hidden sm:inline-flex ml-auto text-[10px] font-mono bg-background border border-border rounded px-1.5 py-0.5">⌘K</kbd>
+        <span className="truncate">Search anything...</span>
+        <kbd className="hidden sm:inline-flex ml-auto text-[10px] font-mono bg-background border border-border rounded px-1.5 py-0.5 gap-0.5 items-center">
+          <Command className="w-2.5 h-2.5" />K
+        </kbd>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+        <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden">
           <div className="flex items-center gap-2 px-4 border-b border-border">
             <Search className="w-4 h-4 text-muted-foreground shrink-0" />
             <Input
               ref={inputRef}
               value={query}
-              onChange={e => handleQueryChange(e.target.value)}
-              placeholder="Search pages & features..."
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Search pages, features, settings..."
               className="border-0 focus-visible:ring-0 shadow-none h-12 text-base"
             />
+            {query && (
+              <Badge variant="secondary" className="shrink-0 text-[10px]">
+                {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+              </Badge>
+            )}
           </div>
-          <div className="max-h-72 overflow-y-auto p-2">
-            {isSearching ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-3 py-2.5">
-                  <Skeleton className="w-8 h-8 rounded-md shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-4 w-28 rounded" />
-                    <Skeleton className="h-3 w-44 rounded" />
+
+          {/* AI suggestion */}
+          {!query && (
+            <div className="px-4 py-2 bg-muted/50 border-b border-border flex items-center gap-2 text-xs text-muted-foreground">
+              <Sparkles className="w-3 h-3 text-secondary" />
+              {getQuickSuggestion()}
+            </div>
+          )}
+
+          <div ref={listRef} className="max-h-80 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground font-medium">No results for "{query}"</p>
+                <p className="text-muted-foreground/60 text-sm mt-1">Try a different search term</p>
+              </div>
+            ) : (
+              Object.entries(grouped).map(([category, items]) => (
+                <div key={category}>
+                  <div className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 bg-muted/30 sticky top-0">
+                    {category}
                   </div>
+                  {items.map(item => {
+                    itemIndex++;
+                    const idx = itemIndex;
+                    const isSelected = idx === selectedIndex;
+                    return (
+                      <button
+                        key={item.path}
+                        onClick={() => go(item.path)}
+                        onMouseEnter={() => setSelectedIndex(idx)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors group ${
+                          isSelected ? "bg-primary/10" : "hover:bg-muted"
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                          isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        }`}>
+                          <item.icon className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>{item.label}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                        </div>
+                        {isSelected && <ArrowRight className="w-4 h-4 text-primary shrink-0" />}
+                      </button>
+                    );
+                  })}
                 </div>
               ))
-            ) : !showResults ? null : filtered.length === 0 ? (
-              <p className="text-center text-muted-foreground text-sm py-8">No results found</p>
-            ) : (
-              filtered.map(item => (
-                <button
-                  key={item.path}
-                  onClick={() => go(item.path)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-muted transition-colors"
-                >
-                  <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                    <item.icon className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">{item.label}</p>
-                    <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                  </div>
-                </button>
-              ))
             )}
+          </div>
+
+          <div className="px-4 py-2 border-t border-border flex items-center justify-between text-[10px] text-muted-foreground bg-muted/30">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 py-0.5 bg-background border border-border rounded text-[9px]">↑↓</kbd> Navigate
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 py-0.5 bg-background border border-border rounded text-[9px]">↵</kbd> Open
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 py-0.5 bg-background border border-border rounded text-[9px]">Esc</kbd> Close
+              </span>
+            </div>
+            <span className="flex items-center gap-1"><Sparkles className="w-3 h-3" /> Smart Search</span>
           </div>
         </DialogContent>
       </Dialog>

@@ -159,13 +159,22 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
               <p className="text-sm font-medium text-foreground">{profile?.full_name || "User"}</p>
               <p className="text-xs text-muted-foreground">{roleLabel}</p>
             </div>
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt={profile.full_name} className="w-9 h-9 rounded-full object-cover border-2 border-border" />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
-                {(profile?.full_name || "U").charAt(0)}
-              </div>
-            )}
+            <button
+              onClick={() => {
+                const settingsPath = role === "admin" ? "/admin/settings" : role === "teacher" ? "/teacher/profile" : role === "parent" ? "/parent/settings" : "/student/profile";
+                navigate(settingsPath);
+              }}
+              className="cursor-pointer rounded-full focus:outline-none focus:ring-2 focus:ring-primary"
+              title="Open Settings"
+            >
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt={profile.full_name} className="w-9 h-9 rounded-full object-cover border-2 border-border hover:border-primary transition-colors" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity">
+                  {(profile?.full_name || "U").charAt(0)}
+                </div>
+              )}
+            </button>
           </div>
         </header>
 

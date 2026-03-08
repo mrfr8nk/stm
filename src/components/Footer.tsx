@@ -72,7 +72,8 @@ const Footer = () => {
         <div className="text-center mt-12 pt-8 border-t border-white/10">
           <p className="font-body text-white/60">© {new Date().getFullYear()} St. Mary's High School. All rights reserved.</p>
           <p className="font-body text-white/40 mt-1 text-sm">
-            Made with ❤️ by Darrell Mucheri
+            Made with ❤️ by{" "}
+            <Link to="/credits" className="text-[hsl(47,100%,50%)] hover:underline">Darrell Mucheri</Link>
           </p>
         </div>
       </div>
