@@ -172,16 +172,24 @@ const Signup = () => {
           .eq("student_id", childStudentId.trim())
           .single();
         if (studentProfile) {
-          const parentPhone = phone.trim().replace(/\s+/g, "");
-          const studentGuardianPhone = (studentProfile.guardian_phone || "").trim().replace(/\s+/g, "");
-          const studentGuardianEmail = (studentProfile.guardian_email || "").trim().toLowerCase();
+          const parentLast9 = phone.replace(/\D/g, "").slice(-9);
+          const guardianLast9 = (studentProfile.guardian_phone || "").replace(/\D/g, "").slice(-9);
+          const phoneMatch = parentLast9.length >= 9 && guardianLast9.length >= 9 && parentLast9 === guardianLast9;
           const parentEmail = email.trim().toLowerCase();
-          const phoneMatch = parentPhone && studentGuardianPhone && parentPhone.includes(studentGuardianPhone.slice(-9));
+          const studentGuardianEmail = (studentProfile.guardian_email || "").trim().toLowerCase();
           const emailMatch = parentEmail && studentGuardianEmail && parentEmail === studentGuardianEmail;
           if (phoneMatch || emailMatch) {
             await supabase.from("parent_student_links").insert({
               parent_id: authData.user.id,
               student_id: studentProfile.user_id,
+            });
+            // Notify the student
+            await supabase.from("notifications").insert({
+              user_id: studentProfile.user_id,
+              title: "🔗 Parent Account Linked",
+              message: `${fullName} has linked to your account as a parent/guardian. They can now view your grades, attendance, and fee records.`,
+              type: "parent_link",
+              metadata: { parent_id: authData.user.id, parent_name: fullName },
             });
           } else {
             toast({
