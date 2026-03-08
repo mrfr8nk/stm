@@ -395,7 +395,7 @@ const Signup = () => {
       </div>
       <div>
         <label className="text-sm font-medium text-foreground">Phone Number</label>
-        <Input placeholder="+263 7X XXX XXXX" value={phone} onChange={e => setPhone(e.target.value)} />
+        <PhoneInput value={phone} onChange={setPhone} />
       </div>
     </div>
   );
