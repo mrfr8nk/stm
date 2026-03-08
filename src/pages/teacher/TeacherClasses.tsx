@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
@@ -12,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users, Search, Download, ArrowUpDown, Eye, Phone, Mail,
   Heart, Calendar, CreditCard, BookOpen, ClipboardCheck, MapPin,
-  AlertTriangle, Droplets, Shield
+  AlertTriangle, Droplets, Shield, Edit, Save, Star
 } from "lucide-react";
 
 type SortField = "name" | "student_id" | "form" | "guardian";
@@ -20,6 +21,7 @@ type SortDir = "asc" | "desc";
 
 const TeacherClasses = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [assignments, setAssignments] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
@@ -31,11 +33,22 @@ const TeacherClasses = () => {
   const [studentAttendance, setStudentAttendance] = useState<any[]>([]);
   const [studentFees, setStudentFees] = useState<any[]>([]);
   const [classSubjects, setClassSubjects] = useState<any[]>([]);
+  const [classTeacherClassIds, setClassTeacherClassIds] = useState<Set<string>>(new Set());
+  const [classTeacherClasses, setClassTeacherClasses] = useState<any[]>([]);
+  const [editingGrade, setEditingGrade] = useState<any>(null);
+  const [editMark, setEditMark] = useState("");
+  const [editComment, setEditComment] = useState("");
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("teacher_assignments").select("*, classes(*), subjects(*)").eq("teacher_id", user.id)
-      .then(({ data }) => setAssignments(data || []));
+    Promise.all([
+      supabase.from("teacher_assignments").select("*, classes(*), subjects(*)").eq("teacher_id", user.id),
+      supabase.from("classes").select("*").eq("class_teacher_id", user.id).is("deleted_at", null),
+    ]).then(([assignRes, ctRes]) => {
+      setAssignments(assignRes.data || []);
+      setClassTeacherClasses(ctRes.data || []);
+      setClassTeacherClassIds(new Set((ctRes.data || []).map((c: any) => c.id)));
+    });
   }, [user]);
 
   useEffect(() => {
@@ -58,7 +71,25 @@ const TeacherClasses = () => {
     setClassSubjects(subs);
   }, [selectedClass, assignments]);
 
-  const uniqueClasses = Array.from(new Map(assignments.map(a => [a.class_id, a.classes])).values()).filter(Boolean);
+  const assignmentClassMap = new Map(assignments.map(a => [a.class_id, a.classes]));
+  classTeacherClasses.forEach(c => { if (!assignmentClassMap.has(c.id)) assignmentClassMap.set(c.id, c); });
+  const uniqueClasses = Array.from(assignmentClassMap.values()).filter(Boolean);
+
+  const isClassTeacherOf = (classId: string) => classTeacherClassIds.has(classId);
+
+  const handleEditGradeSave = async () => {
+    if (!editingGrade) return;
+    const { error } = await supabase.from("grades").update({
+      mark: parseFloat(editMark),
+      comment: editComment || null,
+    }).eq("id", editingGrade.id);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else {
+      toast({ title: "Grade Updated" });
+      setEditingGrade(null);
+      if (selectedStudent) openStudentDetail(selectedStudent);
+    }
+  };
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -128,26 +159,34 @@ const TeacherClasses = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {uniqueClasses.map((cls: any) => {
             const subjectsInClass = assignments.filter(a => a.class_id === cls.id).map(a => a.subjects?.name).filter(Boolean);
+            const isCT = isClassTeacherOf(cls.id);
             return (
               <Card key={cls.id} className={`cursor-pointer transition-all hover:shadow-md ${selectedClass === cls.id ? "ring-2 ring-primary bg-primary/5" : ""}`} onClick={() => setSelectedClass(cls.id)}>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-lg bg-primary/10">
-                      <Users className="w-6 h-6 text-primary" />
+                    <div className={`p-3 rounded-lg ${isCT ? "bg-amber-100 dark:bg-amber-900/20" : "bg-primary/10"}`}>
+                      {isCT ? <Star className="w-6 h-6 text-amber-600" /> : <Users className="w-6 h-6 text-primary" />}
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold text-foreground">{cls.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-foreground">{cls.name}</p>
+                        {isCT && <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-[10px]">Class Teacher</Badge>}
+                      </div>
                       <p className="text-sm text-muted-foreground">Form {cls.form} • {cls.stream || "Main"}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {cls.level?.replace("_", " ").toUpperCase()}
                       </p>
                     </div>
                   </div>
+                  {isCT && subjectsInClass.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-2">All subjects — Class Teacher access</p>
+                  )}
                   {subjectsInClass.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-3">
                       {subjectsInClass.map(s => (
                         <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
                       ))}
+                      {isCT && <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-400">+ All Subjects</Badge>}
                     </div>
                   )}
                 </CardContent>
@@ -292,20 +331,51 @@ const TeacherClasses = () => {
                 </TabsContent>
 
                 <TabsContent value="academic" className="space-y-3 mt-4">
-                  <p className="text-sm font-bold text-foreground">Recent Grades ({studentGrades.length})</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-foreground">All Grades ({studentGrades.length})</p>
+                    {selectedClass && isClassTeacherOf(selectedClass) && (
+                      <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-[10px]">
+                        <Star className="w-3 h-3 mr-1" /> Class Teacher — Can Edit
+                      </Badge>
+                    )}
+                  </div>
                   {studentGrades.length === 0 ? (
                     <p className="text-muted-foreground text-sm py-4">No grades recorded.</p>
                   ) : (
                     <div className="space-y-1">
-                      {studentGrades.slice(0, 20).map(g => (
+                      {studentGrades.slice(0, 30).map(g => (
                         <div key={g.id} className="flex items-center justify-between p-2 rounded bg-muted/50">
                           <span className="text-sm font-medium">{g.subjects?.name || "Subject"}</span>
                           <div className="flex items-center gap-2">
-                            <span className={`text-sm font-bold ${Number(g.mark) >= 75 ? "text-green-600" : Number(g.mark) >= 50 ? "text-yellow-600" : "text-red-600"}`}>
-                              {g.mark}%
-                            </span>
-                            <Badge variant="outline" className="text-[10px]">{g.grade_letter || "—"}</Badge>
-                            <span className="text-xs text-muted-foreground">{g.term?.replace("_", " ")}</span>
+                            {editingGrade?.id === g.id ? (
+                              <>
+                                <Input type="number" min={0} max={100} className="w-20 h-7 text-sm"
+                                  value={editMark} onChange={e => setEditMark(e.target.value)} />
+                                <Input placeholder="Comment" className="w-32 h-7 text-sm"
+                                  value={editComment} onChange={e => setEditComment(e.target.value)} />
+                                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={handleEditGradeSave}>
+                                  <Save className="w-3 h-3" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setEditingGrade(null)}>✕</Button>
+                              </>
+                            ) : (
+                              <>
+                                <span className={`text-sm font-bold ${Number(g.mark) >= 75 ? "text-green-600" : Number(g.mark) >= 50 ? "text-yellow-600" : "text-red-600"}`}>
+                                  {g.mark}%
+                                </span>
+                                <Badge variant="outline" className="text-[10px]">{g.grade_letter || "—"}</Badge>
+                                <span className="text-xs text-muted-foreground">{g.term?.replace("_", " ")}</span>
+                                {selectedClass && isClassTeacherOf(selectedClass) && (
+                                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
+                                    setEditingGrade(g);
+                                    setEditMark(g.mark.toString());
+                                    setEditComment(g.comment || "");
+                                  }}>
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                       ))}

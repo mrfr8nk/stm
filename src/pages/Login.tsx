@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, LogIn, Shield, BookOpen, Users, Loader2 } from "lucide-react";
+import { GraduationCap, LogIn, Shield, BookOpen, Users, Loader2, Fingerprint } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
+import { isPlatformAuthenticatorAvailable, authenticateWithPasskey } from "@/lib/passkey";
 
 type PortalType = "student" | "teacher" | "admin" | "parent";
 
@@ -24,8 +25,42 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    isPlatformAuthenticatorAvailable().then(setBiometricAvailable);
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setBiometricLoading(true);
+    try {
+      const credentialId = await authenticateWithPasskey();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/passkey-auth`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        body: JSON.stringify({ action: "authenticate", credential_id: credentialId }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Authentication failed");
+
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: result.token_hash,
+        type: "magiclink",
+      });
+      if (error) throw error;
+
+      navigate(`/${result.role || "student"}`, { replace: true });
+    } catch (err: any) {
+      if (err.name !== "NotAllowedError") {
+        toast({ title: "Biometric Login Failed", description: err.message || "Could not authenticate.", variant: "destructive" });
+      }
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
@@ -172,6 +207,21 @@ const Login = () => {
                 </Card>
               );
             })}
+
+            {biometricAvailable && (
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  className="w-full border-2 border-dashed border-primary/30 hover:border-primary/60"
+                  onClick={handleBiometricLogin}
+                  disabled={biometricLoading}
+                >
+                  {biometricLoading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Fingerprint className="w-5 h-5 mr-2 text-primary" />}
+                  Sign in with Biometrics
+                </Button>
+                <p className="text-xs text-muted-foreground text-center mt-1">Use fingerprint or face scan</p>
+              </div>
+            )}
 
             <div className="text-center mt-6 space-y-2">
               <Link to="/signup" className="text-sm text-primary hover:underline">
