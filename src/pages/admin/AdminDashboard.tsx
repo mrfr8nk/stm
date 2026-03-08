@@ -226,6 +226,8 @@ const AdminDashboard = () => {
               )) : <p className="text-muted-foreground text-sm">No announcements yet</p>}
             </CardContent>
           </Card>
+          {/* Security Widget */}
+          <SecurityWidget />
         </div>
 
         {/* Activity Log */}
