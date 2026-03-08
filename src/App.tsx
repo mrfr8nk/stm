@@ -73,6 +73,7 @@ import ParentAttendance from "./pages/parent/ParentAttendance";
 import ParentFees from "./pages/parent/ParentFees";
 import ParentMessages from "./pages/parent/ParentMessages";
 import ParentReports from "./pages/parent/ParentReports";
+import ParentSettings from "./pages/parent/ParentSettings";
 
 // Public pages
 import VerifyReport from "./pages/VerifyReport";
