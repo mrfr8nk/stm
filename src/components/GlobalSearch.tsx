@@ -52,12 +52,22 @@ const teacherFeatures: SearchItem[] = [
 const studentFeatures: SearchItem[] = [
   { label: "Dashboard", description: "Overview", path: "/student", icon: Home, keywords: ["home"] },
   { label: "My Grades", description: "View your grades", path: "/student/grades", icon: BookOpen, keywords: ["marks", "results"] },
+  { label: "Rankings", description: "View rankings", path: "/student/rankings", icon: Trophy, keywords: ["rank", "position", "top"] },
   { label: "Attendance", description: "View attendance record", path: "/student/attendance", icon: ClipboardCheck, keywords: ["present", "absent"] },
   { label: "Report Cards", description: "Download report cards", path: "/student/reports", icon: FileText, keywords: ["reports"] },
   { label: "Study Pal AI", description: "AI study assistant", path: "/student/study-pal", icon: BookOpen, keywords: ["ai", "study", "help", "tutor"] },
+  { label: "Messages", description: "Direct messaging", path: "/student/messages", icon: MessageSquare, keywords: ["chat", "dm", "inbox"] },
   { label: "Announcements", description: "View announcements", path: "/student/announcements", icon: Bell, keywords: ["notice"] },
   { label: "Fees", description: "View fee records", path: "/student/fees", icon: DollarSign, keywords: ["payment", "balance"] },
   { label: "Settings", description: "Profile settings", path: "/student/profile", icon: Settings, keywords: ["profile"] },
+];
+
+const parentFeatures: SearchItem[] = [
+  { label: "Dashboard", description: "Overview", path: "/parent", icon: Home, keywords: ["home"] },
+  { label: "Grades", description: "View child's grades", path: "/parent/grades", icon: BookOpen, keywords: ["marks", "results"] },
+  { label: "Attendance", description: "View child's attendance", path: "/parent/attendance", icon: ClipboardCheck, keywords: ["present", "absent"] },
+  { label: "Fees", description: "View fee records", path: "/parent/fees", icon: DollarSign, keywords: ["payment", "balance"] },
+  { label: "Messages", description: "Direct messaging", path: "/parent/messages", icon: MessageSquare, keywords: ["chat", "dm", "inbox"] },
 ];
 
 interface GlobalSearchProps {
