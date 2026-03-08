@@ -129,7 +129,7 @@ const StudentProfile = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div><label className="text-sm font-medium text-foreground">Full Name</label><Input value={fullName} onChange={e => setFullName(e.target.value)} /></div>
               <div><label className="text-sm font-medium text-foreground">Email</label><Input value={user?.email || ""} disabled /></div>
-              <div><label className="text-sm font-medium text-foreground">Phone</label><Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+263..." /></div>
+              <div><label className="text-sm font-medium text-foreground">Phone</label><PhoneInput value={phone} onChange={setPhone} /></div>
             </div>
             <Button onClick={handleSave} disabled={saving}><Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save Changes"}</Button>
           </CardContent>
