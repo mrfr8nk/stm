@@ -166,6 +166,7 @@ export type Database = {
       applications: {
         Row: {
           address: string | null
+          class_id: string | null
           created_at: string
           date_of_birth: string | null
           email: string
@@ -188,6 +189,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          class_id?: string | null
           created_at?: string
           date_of_birth?: string | null
           email: string
@@ -210,6 +212,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          class_id?: string | null
           created_at?: string
           date_of_birth?: string | null
           email?: string
@@ -230,7 +233,15 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "applications_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       attendance: {
         Row: {
