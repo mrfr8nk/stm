@@ -159,26 +159,34 @@ const TeacherClasses = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {uniqueClasses.map((cls: any) => {
             const subjectsInClass = assignments.filter(a => a.class_id === cls.id).map(a => a.subjects?.name).filter(Boolean);
+            const isCT = isClassTeacherOf(cls.id);
             return (
               <Card key={cls.id} className={`cursor-pointer transition-all hover:shadow-md ${selectedClass === cls.id ? "ring-2 ring-primary bg-primary/5" : ""}`} onClick={() => setSelectedClass(cls.id)}>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-lg bg-primary/10">
-                      <Users className="w-6 h-6 text-primary" />
+                    <div className={`p-3 rounded-lg ${isCT ? "bg-amber-100 dark:bg-amber-900/20" : "bg-primary/10"}`}>
+                      {isCT ? <Star className="w-6 h-6 text-amber-600" /> : <Users className="w-6 h-6 text-primary" />}
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold text-foreground">{cls.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-foreground">{cls.name}</p>
+                        {isCT && <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-[10px]">Class Teacher</Badge>}
+                      </div>
                       <p className="text-sm text-muted-foreground">Form {cls.form} • {cls.stream || "Main"}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {cls.level?.replace("_", " ").toUpperCase()}
                       </p>
                     </div>
                   </div>
+                  {isCT && subjectsInClass.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-2">All subjects — Class Teacher access</p>
+                  )}
                   {subjectsInClass.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-3">
                       {subjectsInClass.map(s => (
                         <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
                       ))}
+                      {isCT && <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-400">+ All Subjects</Badge>}
                     </div>
                   )}
                 </CardContent>
