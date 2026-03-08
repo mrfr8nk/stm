@@ -330,11 +330,9 @@ const StudentReports = () => {
     <img src="${qrUrl}" alt="Verification QR Code" />
     <div class="qr-info">
       <strong>VERIFICATION QR CODE</strong><br/>
-      Scan this code to verify the authenticity of this report card.<br/>
+      Scan to verify this report card at:<br/><strong>${verifyUrl}</strong><br/>
       Serial: <strong>${serialNo}</strong><br/>
       Student: <strong>${profileName}</strong> (${studentProfile?.student_id || "N/A"})<br/>
-      Class: <strong>${className}</strong> | ${termLabel} ${year}<br/>
-      Average: <strong>${avgMark}%</strong> | Grade: <strong>${getGradeLetter(avgMark)}</strong><br/>
       Generated: ${dateGenerated}<br/>
       <em>Any unauthorized alteration of this document renders it void.</em>
     </div>

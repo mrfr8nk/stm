@@ -153,6 +153,7 @@ const App = () => (
               <Route path="/parent/attendance" element={<ProtectedRoute allowedRoles={["parent"]}><ParentAttendance /></ProtectedRoute>} />
               <Route path="/parent/fees" element={<ProtectedRoute allowedRoles={["parent"]}><ParentFees /></ProtectedRoute>} />
               <Route path="/parent/messages" element={<ProtectedRoute allowedRoles={["parent"]}><ParentMessages /></ProtectedRoute>} />
+              <Route path="/parent/reports" element={<ProtectedRoute allowedRoles={["parent"]}><ParentReports /></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
