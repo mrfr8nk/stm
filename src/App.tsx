@@ -63,6 +63,7 @@ import AdminMessages from "./pages/admin/AdminMessages";
 import AdminHomepageUpdates from "./pages/admin/AdminHomepageUpdates";
 import AdminStaffGallery from "./pages/admin/AdminStaffGallery";
 import AdminStudentHistory from "./pages/admin/AdminStudentHistory";
+import AdminRecordBooks from "./pages/admin/AdminRecordBooks";
 
 // Parent pages
 import ParentDashboard from "./pages/parent/ParentDashboard";
@@ -136,6 +137,7 @@ const App = () => (
               <Route path="/admin/finance" element={<ProtectedRoute allowedRoles={["admin"]}><AdminFinance /></ProtectedRoute>} />
               <Route path="/admin/homepage" element={<ProtectedRoute allowedRoles={["admin"]}><AdminHomepageUpdates /></ProtectedRoute>} />
               <Route path="/admin/staff-gallery" element={<ProtectedRoute allowedRoles={["admin"]}><AdminStaffGallery /></ProtectedRoute>} />
+              <Route path="/admin/record-books" element={<ProtectedRoute allowedRoles={["admin"]}><AdminRecordBooks /></ProtectedRoute>} />
               <Route path="/admin/student-history" element={<ProtectedRoute allowedRoles={["admin"]}><AdminStudentHistory /></ProtectedRoute>} />
 
               {/* Parent Portal */}
