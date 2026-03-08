@@ -158,14 +158,23 @@ const StudentReports = () => {
     loadLogo();
   }, []);
 
-  // Fetch signatures for report
+  // Fetch signatures for report — class_teacher signature is matched dynamically to the student's actual class teacher
   const fetchSignatureImages = async (): Promise<Map<string, { url: string; name: string; base64: string }>> => {
     const { data: sigs } = await supabase.from("report_signatures").select("*");
     const map = new Map<string, { url: string; name: string; base64: string }>();
     if (!sigs) return map;
+
+    // Find the student's class teacher id from the classes table
+    let classTeacherId: string | null = null;
+    if (studentProfile?.class_id) {
+      const { data: classData } = await supabase.from("classes").select("class_teacher_id").eq("id", studentProfile.class_id).maybeSingle();
+      classTeacherId = classData?.class_teacher_id || null;
+    }
     
     await Promise.all(sigs.map(async (sig) => {
       if (!sig.signature_url) return;
+      // For class_teacher role, only use the signature from the student's actual class teacher
+      if (sig.role_title === "class_teacher" && classTeacherId && sig.user_id !== classTeacherId) return;
       try {
         const img = new Image();
         img.crossOrigin = "anonymous";
