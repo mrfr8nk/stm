@@ -257,7 +257,7 @@ const TeacherReports = () => {
   
   <div class="comment-box">
     <div class="title">Headmaster's Remark</div>
-    <p style="font-size:9.5pt">${getHeadmasterRemark(avg, studentName)}</p>
+    <p style="font-size:9.5pt">${getHeadmasterRemark(avg, student.profiles?.full_name || "Student")}</p>
   </div>
   
   <table class="grading-key"><tr>${getGradeScaleHTML()}</tr></table>

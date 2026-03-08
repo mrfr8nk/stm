@@ -325,7 +325,7 @@ const ParentReports = () => {
     y += 18;
     doc.setFillColor(250, 251, 252); doc.roundedRect(15, y, pw - 30, 14, 2, 2, "FD");
     doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.setTextColor(...pc); doc.text("HEADMASTER'S REMARK", 18, y + 4);
-    doc.setFont("helvetica", "normal"); doc.setTextColor(60); doc.setFontSize(8); doc.text(getHeadmasterRemark(avgMark, studentName), 18, y + 10);
+    doc.setFont("helvetica", "normal"); doc.setTextColor(60); doc.setFontSize(8); doc.text(getHeadmasterRemark(avgMark, profileName), 18, y + 10);
     y += 18;
 
     // Grading key

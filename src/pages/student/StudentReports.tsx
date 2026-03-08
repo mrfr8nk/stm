@@ -411,7 +411,7 @@ const StudentReports = () => {
     doc.setFont("helvetica", "normal");
     doc.setTextColor(60);
     doc.setFontSize(8);
-    doc.text(getHeadmasterRemark(avgMark, studentName), 18, y + 10);
+    doc.text(getHeadmasterRemark(avgMark, profileName), 18, y + 10);
 
     y += 18;
 
