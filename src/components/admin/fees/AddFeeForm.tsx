@@ -70,8 +70,11 @@ const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, o
       toast({ title: "Error", description: "Select a student.", variant: "destructive" });
       return;
     }
-    if (selectedTerms.length === 0) {
-      toast({ title: "Error", description: "Select at least one term.", variant: "destructive" });
+    // Only create records for terms that don't already exist
+    const termsToCreate = hasExistingConflicts ? termsWithoutConflicts : selectedTerms;
+    if (termsToCreate.length === 0) {
+      toast({ title: "Error", description: "All selected terms already have records. Use 'Record Payment' to add payments.", variant: "destructive" });
+      setIsSubmitting(false);
       return;
     }
 
@@ -79,10 +82,10 @@ const AddFeeForm = ({ students, studentProfiles, feeStructure, zigRate, years, o
     const paidRaw = Number(amountPaid) || 0;
     const totalPaidUSD = currency === "ZIG" ? paidRaw / zigRate : paidRaw;
 
-    // Split payment evenly across selected terms
-    const perTermPaid = selectedTerms.length > 0 ? totalPaidUSD / selectedTerms.length : 0;
+    // Split payment evenly across terms being created
+    const perTermPaid = termsToCreate.length > 0 ? totalPaidUSD / termsToCreate.length : 0;
 
-    const records = selectedTerms.map((term) => ({
+    const records = termsToCreate.map((term) => ({
       student_id: selectedStudent,
       term: term as any,
       academic_year: parseInt(feeYear),
