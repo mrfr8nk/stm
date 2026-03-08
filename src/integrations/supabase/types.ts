@@ -880,6 +880,7 @@ export type Database = {
           emergency_phone: string | null
           enrollment_date: string | null
           form: number
+          graduation_status: string | null
           guardian_email: string | null
           guardian_name: string | null
           guardian_phone: string | null
@@ -904,6 +905,7 @@ export type Database = {
           emergency_phone?: string | null
           enrollment_date?: string | null
           form: number
+          graduation_status?: string | null
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
@@ -928,6 +930,7 @@ export type Database = {
           emergency_phone?: string | null
           enrollment_date?: string | null
           form?: number
+          graduation_status?: string | null
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
