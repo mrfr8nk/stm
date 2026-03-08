@@ -11,45 +11,52 @@ const LOGO = "https://vojhptlreurutrzftatn.supabase.co/storage/v1/object/public/
 const SCHOOL = "St. Mary's High School";
 const MOTTO = "Excellence & Integrity";
 
-function sendEmail(gmailEmail: string, gmailAppPassword: string, to: string | string[], subject: string, html: string) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const client = new SMTPClient({
-        connection: {
-          hostname: "smtp.gmail.com",
-          port: 465,
-          tls: true,
-          auth: { username: gmailEmail, password: gmailAppPassword },
-        },
-      });
-
-      if (Array.isArray(to)) {
-        let sent = 0, failed = 0;
-        for (const addr of to) {
-          try {
-            await client.send({
-              from: `${SCHOOL} <${gmailEmail}>`,
-              to: addr,
-              subject,
-              html,
-            });
-            sent++;
-          } catch { failed++; }
-        }
-        await client.close();
-        resolve({ sent, failed });
-      } else {
-        await client.send({
-          from: `${SCHOOL} <${gmailEmail}>`,
-          to,
-          subject,
-          html,
-        });
-        await client.close();
-        resolve({ sent: 1, failed: 0 });
-      }
-    } catch (e) { reject(e); }
+async function sendSingle(gmailEmail: string, gmailAppPassword: string, to: string, subject: string, html: string) {
+  const client = new SMTPClient({
+    connection: {
+      hostname: "smtp.gmail.com",
+      port: 465,
+      tls: true,
+      auth: { username: gmailEmail, password: gmailAppPassword },
+    },
   });
+  await client.send({
+    from: `${SCHOOL} <${gmailEmail}>`,
+    to,
+    subject,
+    html,
+  });
+  await client.close();
+}
+
+async function sendWithRetry(gmailEmail: string, gmailAppPassword: string, to: string, subject: string, html: string, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      await sendSingle(gmailEmail, gmailAppPassword, to, subject, html);
+      return;
+    } catch (e) {
+      console.error(`SMTP attempt ${attempt + 1} failed for ${to}:`, e);
+      if (attempt === retries) throw e;
+      // Wait before retry (500ms, 1000ms)
+      await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+    }
+  }
+}
+
+async function sendEmail(gmailEmail: string, gmailAppPassword: string, to: string | string[], subject: string, html: string) {
+  if (Array.isArray(to)) {
+    let sent = 0, failed = 0;
+    for (const addr of to) {
+      try {
+        await sendWithRetry(gmailEmail, gmailAppPassword, addr, subject, html);
+        sent++;
+      } catch { failed++; }
+    }
+    return { sent, failed };
+  } else {
+    await sendWithRetry(gmailEmail, gmailAppPassword, to, subject, html);
+    return { sent: 1, failed: 0 };
+  }
 }
 
 // Build email - keep lines SHORT to avoid =20 quoted-printable encoding
