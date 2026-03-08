@@ -142,7 +142,17 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
             />
           </div>
           <div className="max-h-72 overflow-y-auto p-2">
-            {filtered.length === 0 ? (
+            {isSearching ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+                  <Skeleton className="w-8 h-8 rounded-md shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-28 rounded" />
+                    <Skeleton className="h-3 w-44 rounded" />
+                  </div>
+                </div>
+              ))
+            ) : !showResults ? null : filtered.length === 0 ? (
               <p className="text-center text-muted-foreground text-sm py-8">No results found</p>
             ) : (
               filtered.map(item => (
