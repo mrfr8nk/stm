@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, LogIn, Shield, BookOpen, Users, Loader2 } from "lucide-react";
+import { GraduationCap, LogIn, Shield, BookOpen, Users, Loader2, Fingerprint } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
+import { isPlatformAuthenticatorAvailable, authenticateWithPasskey } from "@/lib/passkey";
 
 type PortalType = "student" | "teacher" | "admin" | "parent";
 
