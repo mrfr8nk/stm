@@ -58,6 +58,7 @@ const adminNav: NavItem[] = [
   { label: "Finance & Petty Cash", path: "/admin/finance", icon: Receipt },
   { label: "Homepage Updates", path: "/admin/homepage", icon: Newspaper },
   { label: "Staff Gallery", path: "/admin/staff-gallery", icon: Image },
+  { label: "Student History", path: "/admin/student-history", icon: History },
   { label: "Settings", path: "/admin/settings", icon: Settings },
 ];
 
