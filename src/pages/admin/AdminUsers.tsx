@@ -540,10 +540,32 @@ const AdminUsers = () => {
                     {roleBadge(selectedUser.role)}
                   </div>
                 </div>
+
+                {/* Ban / Unban */}
+                {selectedUser.role !== "admin" && (
+                  <div className={`flex items-center justify-between p-3 rounded-lg border ${selectedUser.is_banned ? "bg-destructive/10 border-destructive/30" : "bg-muted/30"}`}>
+                    <div className="flex items-center gap-2">
+                      {selectedUser.is_banned ? (
+                        <><Ban className="w-5 h-5 text-destructive" /><div><p className="font-medium text-destructive">Account Banned</p><p className="text-xs text-muted-foreground">{selectedUser.banned_reason || "No reason provided"}</p></div></>
+                      ) : (
+                        <><ShieldOff className="w-5 h-5 text-muted-foreground" /><p className="text-sm text-muted-foreground">Account is active and not banned</p></>
+                      )}
+                    </div>
+                    <Button
+                      variant={selectedUser.is_banned ? "outline" : "destructive"}
+                      size="sm"
+                      onClick={() => handleBanUser(selectedUser.user_id, selectedUser.is_banned)}
+                    >
+                      {selectedUser.is_banned ? <><UserCheck className="w-4 h-4 mr-1" /> Unban</> : <><Ban className="w-4 h-4 mr-1" /> Ban Account</>}
+                    </Button>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" /> {selectedUser.email || "—"}</div>
                   <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground" /> {selectedUser.phone || "—"}</div>
                   <div><span className="text-muted-foreground">Joined:</span> {new Date(selectedUser.created_at).toLocaleDateString()}</div>
+                  {selectedUser.gender && <div><span className="text-muted-foreground">Sex:</span> {selectedUser.gender === "male" ? "Male" : "Female"}</div>}
                 </div>
 
                 {/* Parent-Child Linking Section */}
