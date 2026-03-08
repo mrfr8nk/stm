@@ -25,8 +25,42 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    isPlatformAuthenticatorAvailable().then(setBiometricAvailable);
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setBiometricLoading(true);
+    try {
+      const credentialId = await authenticateWithPasskey();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/passkey-auth`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        body: JSON.stringify({ action: "authenticate", credential_id: credentialId }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Authentication failed");
+
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: result.token_hash,
+        type: "magiclink",
+      });
+      if (error) throw error;
+
+      navigate(`/${result.role || "student"}`, { replace: true });
+    } catch (err: any) {
+      if (err.name !== "NotAllowedError") {
+        toast({ title: "Biometric Login Failed", description: err.message || "Could not authenticate.", variant: "destructive" });
+      }
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
