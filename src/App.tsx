@@ -102,6 +102,7 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/verify-report" element={<VerifyReport />} />
+              <Route path="/credits" element={<Credits />} />
 
               {/* Teacher Portal */}
               <Route path="/teacher" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherDashboard /></ProtectedRoute>} />
