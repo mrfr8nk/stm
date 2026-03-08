@@ -96,17 +96,17 @@ const ParentReports = () => {
       
       // Parallel fetch grades, fees, scales, classmates
       const promises: Promise<any>[] = [
-        supabase.from("grades").select("*, subjects(name, code)")
-          .eq("student_id", selectedChild).eq("term", term as any).eq("academic_year", year).is("deleted_at", null),
-        supabase.from("fee_records").select("*").eq("student_id", selectedChild).is("deleted_at", null),
+        Promise.resolve(supabase.from("grades").select("*, subjects(name, code)")
+          .eq("student_id", selectedChild).eq("term", term as any).eq("academic_year", year).is("deleted_at", null)),
+        Promise.resolve(supabase.from("fee_records").select("*").eq("student_id", selectedChild).is("deleted_at", null)),
       ];
       
       if (level) {
-        promises.push(supabase.from("grading_scales").select("*").eq("level", level));
+        promises.push(Promise.resolve(supabase.from("grading_scales").select("*").eq("level", level)));
       }
       
       if (child.sp?.class_id) {
-        promises.push(supabase.from("student_profiles").select("user_id").eq("class_id", child.sp.class_id).eq("is_active", true));
+        promises.push(Promise.resolve(supabase.from("student_profiles").select("user_id").eq("class_id", child.sp.class_id).eq("is_active", true)));
       }
 
       const results = await Promise.all(promises);
