@@ -204,7 +204,7 @@ const AdminApplications = () => {
                     </>
                   )}
                   {a.status === "rejected" && (
-                    <Button variant="ghost" size="sm" title="Reconsider" onClick={() => { setSelected(a); setDetailOpen(true); setSelectedClass(""); }}>
+                    <Button variant="ghost" size="sm" title="Reconsider" onClick={() => { setSelected(a); setDetailOpen(true); setSelectedClass(a.class_id || ""); }}>
                       <RotateCcw className="w-4 h-4 text-yellow-600" />
                     </Button>
                   )}
