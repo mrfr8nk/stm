@@ -62,7 +62,7 @@ const AdminFees = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const [feeRes, profilesRes, rolesRes, sessionsRes, spRes, subjectsRes, classesRes, scholarshipRes] = await Promise.all([
+    const [feeRes, profilesRes, rolesRes, sessionsRes, spRes, subjectsRes, classesRes, scholarshipRes, settingsRes] = await Promise.all([
       supabase.from("fee_records").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*"),
       supabase.from("user_roles").select("*").eq("role", "student"),
@@ -71,6 +71,7 @@ const AdminFees = () => {
       supabase.from("subjects").select("*").is("deleted_at", null),
       supabase.from("classes").select("*").is("deleted_at", null),
       supabase.from("scholarships").select("*").order("created_at", { ascending: false }),
+      supabase.from("system_settings").select("*").in("key", ["zig_rate", "fee_structure"]),
     ]);
     const profiles = profilesRes.data || [];
     const studentIds = new Set((rolesRes.data || []).map((r: any) => r.user_id));
@@ -83,6 +84,16 @@ const AdminFees = () => {
     setSessions(sessionsRes.data || []);
     setSubjects(subjectsRes.data || []);
     setScholarships(scholarshipRes.data || []);
+
+    // Load saved settings
+    const settings = settingsRes.data || [];
+    const savedRate = settings.find((s: any) => s.key === "zig_rate");
+    if (savedRate) setZigRate(Number(savedRate.value) || DEFAULT_ZIG_RATE);
+    const savedFees = settings.find((s: any) => s.key === "fee_structure");
+    if (savedFees) {
+      try { setFeeStructure(JSON.parse(savedFees.value)); } catch {}
+    }
+
     setLoading(false);
   };
 
