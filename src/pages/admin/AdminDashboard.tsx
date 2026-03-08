@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, GraduationCap, BookOpen, Key, Bell, FileText, Calendar, TrendingUp, Clock, Mail, Shield } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import SecurityWidget from "@/components/admin/SecurityWidget";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "#f59e0b", "#10b981", "#8b5cf6"];
 
@@ -225,6 +226,8 @@ const AdminDashboard = () => {
               )) : <p className="text-muted-foreground text-sm">No announcements yet</p>}
             </CardContent>
           </Card>
+          {/* Security Widget */}
+          <SecurityWidget />
         </div>
 
         {/* Activity Log */}

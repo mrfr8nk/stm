@@ -7,7 +7,7 @@ import GlobalSearch from "@/components/GlobalSearch";
 import {
   Menu, X, LogOut, Home, Users, BookOpen, ClipboardCheck,
   FileText, Bell, Settings, BarChart3, Key, GraduationCap,
-  DollarSign, User, Receipt, MessageSquare, Trophy, Newspaper, Image, History
+  DollarSign, User, Receipt, MessageSquare, Trophy, Newspaper, Image, History, ShieldAlert
 } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
 
@@ -62,6 +62,7 @@ const adminNav: NavItem[] = [
   { label: "Staff Gallery", path: "/admin/staff-gallery", icon: Image },
   { label: "Record Books", path: "/admin/record-books", icon: BookOpen },
   { label: "Student History", path: "/admin/student-history", icon: History },
+  { label: "AI Security", path: "/admin/security", icon: ShieldAlert },
   { label: "Settings", path: "/admin/settings", icon: Settings },
 ];
 
