@@ -919,6 +919,60 @@ export type Database = {
           },
         ]
       }
+      report_verifications: {
+        Row: {
+          academic_year: number
+          average_mark: number | null
+          class_name: string | null
+          generated_at: string
+          generated_by: string | null
+          id: string
+          level: string | null
+          position: number | null
+          serial_number: string
+          student_code: string | null
+          student_id: string
+          student_name: string
+          subjects_count: number | null
+          term: string
+          total_students: number | null
+        }
+        Insert: {
+          academic_year: number
+          average_mark?: number | null
+          class_name?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          level?: string | null
+          position?: number | null
+          serial_number: string
+          student_code?: string | null
+          student_id: string
+          student_name: string
+          subjects_count?: number | null
+          term: string
+          total_students?: number | null
+        }
+        Update: {
+          academic_year?: number
+          average_mark?: number | null
+          class_name?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          level?: string | null
+          position?: number | null
+          serial_number?: string
+          student_code?: string | null
+          student_id?: string
+          student_name?: string
+          subjects_count?: number | null
+          term?: string
+          total_students?: number | null
+        }
+        Relationships: []
+      }
       scholarships: {
         Row: {
           coverage_percentage: number

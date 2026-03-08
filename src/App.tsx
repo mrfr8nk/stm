@@ -72,6 +72,10 @@ import ParentGrades from "./pages/parent/ParentGrades";
 import ParentAttendance from "./pages/parent/ParentAttendance";
 import ParentFees from "./pages/parent/ParentFees";
 import ParentMessages from "./pages/parent/ParentMessages";
+import ParentReports from "./pages/parent/ParentReports";
+
+// Public pages
+import VerifyReport from "./pages/VerifyReport";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +100,7 @@ const App = () => (
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/verify-report" element={<VerifyReport />} />
 
               {/* Teacher Portal */}
               <Route path="/teacher" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherDashboard /></ProtectedRoute>} />
@@ -148,6 +153,7 @@ const App = () => (
               <Route path="/parent/attendance" element={<ProtectedRoute allowedRoles={["parent"]}><ParentAttendance /></ProtectedRoute>} />
               <Route path="/parent/fees" element={<ProtectedRoute allowedRoles={["parent"]}><ParentFees /></ProtectedRoute>} />
               <Route path="/parent/messages" element={<ProtectedRoute allowedRoles={["parent"]}><ParentMessages /></ProtectedRoute>} />
+              <Route path="/parent/reports" element={<ProtectedRoute allowedRoles={["parent"]}><ParentReports /></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

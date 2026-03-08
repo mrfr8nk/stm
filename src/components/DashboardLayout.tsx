@@ -68,6 +68,7 @@ const adminNav: NavItem[] = [
 const parentNav: NavItem[] = [
   { label: "Dashboard", path: "/parent", icon: Home },
   { label: "Grades", path: "/parent/grades", icon: BookOpen },
+  { label: "Report Cards", path: "/parent/reports", icon: FileText },
   { label: "Attendance", path: "/parent/attendance", icon: ClipboardCheck },
   { label: "Fees", path: "/parent/fees", icon: DollarSign },
   { label: "Messages", path: "/parent/messages", icon: MessageSquare },

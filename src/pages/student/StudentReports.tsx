@@ -172,20 +172,26 @@ const StudentReports = () => {
     const dateGenerated = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
     const ordinal = (n: number) => n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`;
 
-    // QR code verification data
-    const qrData = encodeURIComponent(JSON.stringify({
-      serial: serialNo,
-      student: profileName,
-      studentId: studentProfile?.student_id || "",
-      class: className,
+    // Save verification record to database
+    await supabase.from("report_verifications").insert({
+      serial_number: serialNo,
+      student_id: user!.id,
+      student_name: profileName,
+      student_code: studentProfile?.student_id || null,
+      class_name: className,
+      level: studentProfile?.level || null,
       term: termLabel,
-      year,
-      avg: avgMark,
-      subjects: grades.length,
-      school: schoolInfo.name,
-      generated: dateGenerated
-    }));
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${qrData}`;
+      academic_year: year,
+      average_mark: avgMark,
+      subjects_count: grades.length,
+      position: position || null,
+      total_students: totalStudents || null,
+      generated_by: user!.id,
+    });
+
+    // QR code links to verification page
+    const verifyUrl = `${window.location.origin}/verify-report?serial=${encodeURIComponent(serialNo)}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(verifyUrl)}`;
 
     const getGradeScaleHTML = () => {
       const scales = [...gradingScales].sort((a, b) => b.max_mark - a.max_mark);
@@ -324,11 +330,9 @@ const StudentReports = () => {
     <img src="${qrUrl}" alt="Verification QR Code" />
     <div class="qr-info">
       <strong>VERIFICATION QR CODE</strong><br/>
-      Scan this code to verify the authenticity of this report card.<br/>
+      Scan to verify this report card at:<br/><strong>${verifyUrl}</strong><br/>
       Serial: <strong>${serialNo}</strong><br/>
       Student: <strong>${profileName}</strong> (${studentProfile?.student_id || "N/A"})<br/>
-      Class: <strong>${className}</strong> | ${termLabel} ${year}<br/>
-      Average: <strong>${avgMark}%</strong> | Grade: <strong>${getGradeLetter(avgMark)}</strong><br/>
       Generated: ${dateGenerated}<br/>
       <em>Any unauthorized alteration of this document renders it void.</em>
     </div>
