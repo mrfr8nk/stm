@@ -139,6 +139,7 @@ const App = () => (
               <Route path="/admin/homepage" element={<ProtectedRoute allowedRoles={["admin"]}><AdminHomepageUpdates /></ProtectedRoute>} />
               <Route path="/admin/staff-gallery" element={<ProtectedRoute allowedRoles={["admin"]}><AdminStaffGallery /></ProtectedRoute>} />
               <Route path="/admin/record-books" element={<ProtectedRoute allowedRoles={["admin"]}><AdminRecordBooks /></ProtectedRoute>} />
+              <Route path="/admin/staff-management" element={<ProtectedRoute allowedRoles={["admin"]}><AdminStaffManagement /></ProtectedRoute>} />
               <Route path="/admin/student-history" element={<ProtectedRoute allowedRoles={["admin"]}><AdminStudentHistory /></ProtectedRoute>} />
 
               {/* Parent Portal */}
