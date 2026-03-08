@@ -70,7 +70,25 @@ const TeacherClasses = () => {
     setClassSubjects(subs);
   }, [selectedClass, assignments]);
 
-  const uniqueClasses = Array.from(new Map(assignments.map(a => [a.class_id, a.classes])).values()).filter(Boolean);
+  const assignmentClassMap = new Map(assignments.map(a => [a.class_id, a.classes]));
+  classTeacherClasses.forEach(c => { if (!assignmentClassMap.has(c.id)) assignmentClassMap.set(c.id, c); });
+  const uniqueClasses = Array.from(assignmentClassMap.values()).filter(Boolean);
+
+  const isClassTeacherOf = (classId: string) => classTeacherClassIds.has(classId);
+
+  const handleEditGradeSave = async () => {
+    if (!editingGrade) return;
+    const { error } = await supabase.from("grades").update({
+      mark: parseFloat(editMark),
+      comment: editComment || null,
+    }).eq("id", editingGrade.id);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else {
+      toast({ title: "Grade Updated" });
+      setEditingGrade(null);
+      if (selectedStudent) openStudentDetail(selectedStudent);
+    }
+  };
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
