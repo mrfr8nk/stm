@@ -68,7 +68,7 @@ const AdminSettings = () => {
     ];
     const counts: Record<string, number> = {};
     await Promise.all(tables.map(async (t) => {
-      const { count } = await supabase.from(t).select("*", { count: "exact", head: true });
+      const { count } = await (supabase.from as any)(t).select("*", { count: "exact", head: true });
       counts[t] = count || 0;
     }));
     setDbStats(counts);
