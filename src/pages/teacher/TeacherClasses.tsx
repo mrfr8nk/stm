@@ -20,6 +20,7 @@ type SortDir = "asc" | "desc";
 
 const TeacherClasses = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [assignments, setAssignments] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
@@ -31,11 +32,22 @@ const TeacherClasses = () => {
   const [studentAttendance, setStudentAttendance] = useState<any[]>([]);
   const [studentFees, setStudentFees] = useState<any[]>([]);
   const [classSubjects, setClassSubjects] = useState<any[]>([]);
+  const [classTeacherClassIds, setClassTeacherClassIds] = useState<Set<string>>(new Set());
+  const [classTeacherClasses, setClassTeacherClasses] = useState<any[]>([]);
+  const [editingGrade, setEditingGrade] = useState<any>(null);
+  const [editMark, setEditMark] = useState("");
+  const [editComment, setEditComment] = useState("");
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("teacher_assignments").select("*, classes(*), subjects(*)").eq("teacher_id", user.id)
-      .then(({ data }) => setAssignments(data || []));
+    Promise.all([
+      supabase.from("teacher_assignments").select("*, classes(*), subjects(*)").eq("teacher_id", user.id),
+      supabase.from("classes").select("*").eq("class_teacher_id", user.id).is("deleted_at", null),
+    ]).then(([assignRes, ctRes]) => {
+      setAssignments(assignRes.data || []);
+      setClassTeacherClasses(ctRes.data || []);
+      setClassTeacherClassIds(new Set((ctRes.data || []).map((c: any) => c.id)));
+    });
   }, [user]);
 
   useEffect(() => {
