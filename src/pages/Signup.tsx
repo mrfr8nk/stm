@@ -273,7 +273,7 @@ const Signup = () => {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-sm font-medium text-foreground">Phone</label>
-          <Input placeholder="+263 7X XXX XXXX" value={phone} onChange={e => setPhone(e.target.value)} />
+          <PhoneInput value={phone} onChange={setPhone} />
         </div>
         <div>
           <label className="text-sm font-medium text-foreground">Date of Birth</label>
