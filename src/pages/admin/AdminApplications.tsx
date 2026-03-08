@@ -190,12 +190,12 @@ const AdminApplications = () => {
               <TableCell className="text-sm text-muted-foreground">{new Date(a.created_at).toLocaleDateString()}</TableCell>
               <TableCell>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => { setSelected(a); setDetailOpen(true); setSelectedClass(""); }}>
+                  <Button variant="ghost" size="sm" onClick={() => { setSelected(a); setDetailOpen(true); setSelectedClass(a.class_id || ""); }}>
                     <Eye className="w-4 h-4" />
                   </Button>
                   {a.status === "pending" && (
                     <>
-                      <Button variant="ghost" size="sm" onClick={() => { setSelected(a); setDetailOpen(true); setSelectedClass(""); }}>
+                      <Button variant="ghost" size="sm" onClick={() => { setSelected(a); setDetailOpen(true); setSelectedClass(a.class_id || ""); }}>
                         <CheckCircle className="w-4 h-4 text-green-600" />
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => updateStatus(a.id, "rejected")}>
@@ -204,7 +204,7 @@ const AdminApplications = () => {
                     </>
                   )}
                   {a.status === "rejected" && (
-                    <Button variant="ghost" size="sm" title="Reconsider" onClick={() => { setSelected(a); setDetailOpen(true); setSelectedClass(""); }}>
+                    <Button variant="ghost" size="sm" title="Reconsider" onClick={() => { setSelected(a); setDetailOpen(true); setSelectedClass(a.class_id || ""); }}>
                       <RotateCcw className="w-4 h-4 text-yellow-600" />
                     </Button>
                   )}

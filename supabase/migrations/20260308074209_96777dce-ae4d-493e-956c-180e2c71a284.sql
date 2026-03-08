@@ -1,0 +1,1 @@
+ALTER TABLE public.applications ADD COLUMN class_id uuid REFERENCES public.classes(id) DEFAULT NULL;

@@ -184,7 +184,8 @@ const Signup = () => {
       previous_school: previousSchool || null,
       notes: notes || null,
       user_id: authData.user.id,
-    });
+      class_id: selectedClass || null,
+    } as any);
 
     await supabase.auth.signOut();
 
