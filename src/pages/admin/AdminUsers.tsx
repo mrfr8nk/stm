@@ -30,6 +30,7 @@ const AdminUsers = () => {
   const [saving, setSaving] = useState(false);
   const [linkStudentId, setLinkStudentId] = useState("");
   const [linking, setLinking] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const fetchData = async () => {
     setLoading(true);
