@@ -248,10 +248,6 @@ const Signup = () => {
         </div>
       </div>
       <div>
-        <label className="text-sm font-medium text-foreground">National ID / Birth Certificate No.</label>
-        <Input placeholder="e.g. 63-123456A78" value={nationalId} onChange={e => setNationalId(e.target.value)} />
-      </div>
-      <div>
         <label className="text-sm font-medium text-foreground">Home Address</label>
         <Input placeholder="Full home address" value={address} onChange={e => setAddress(e.target.value)} />
       </div>
