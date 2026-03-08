@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Search, Home, Users, FileText, GraduationCap, BookOpen, Key,
   BarChart3, Bell, DollarSign, Receipt, Settings, ClipboardCheck
