@@ -10,6 +10,7 @@ import { User, Save, Briefcase, Shield } from "lucide-react";
 import AvatarUpload from "@/components/AvatarUpload";
 import ThemeToggle from "@/components/ThemeToggle";
 import SignatureManager from "@/components/SignatureManager";
+import BiometricEnrollment from "@/components/BiometricEnrollment";
 
 const TeacherProfile = () => {
   const { user, profile } = useAuth();
