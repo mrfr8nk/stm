@@ -291,6 +291,10 @@ const AdminFees = () => {
             <Button variant="outline" size="sm" onClick={() => setShowCharts(!showCharts)}>
               <BarChart3 className="w-4 h-4 mr-1" /> {showCharts ? "Hide Charts" : "Charts"}
             </Button>
+            <Button variant="outline" size="sm" onClick={sendFeeReminders} disabled={sendingReminders}>
+              {sendingReminders ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Mail className="w-4 h-4 mr-1" />}
+              {sendingReminders ? "Sending..." : "Send Reminders"}
+            </Button>
             <ExportDropdown
               title="Fee Records Report"
               filename="fee_report"
