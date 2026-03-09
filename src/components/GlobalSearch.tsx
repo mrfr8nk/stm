@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,7 @@ import {
   Search, Home, Users, FileText, GraduationCap, BookOpen, Key,
   BarChart3, Bell, DollarSign, Receipt, Settings, ClipboardCheck,
   MessageSquare, Trophy, Newspaper, Image, History, User, Sparkles,
-  ArrowRight, Command, ShieldAlert
+  ArrowRight, Command, ShieldAlert, Loader2
 } from "lucide-react";
 
 interface SearchItem {
@@ -78,6 +79,14 @@ const parentFeatures: SearchItem[] = [
   { label: "Settings", description: "Account settings", path: "/parent/settings", icon: Settings, keywords: ["profile"], category: "System" },
 ];
 
+interface DbResult {
+  label: string;
+  description: string;
+  path: string;
+  icon: React.ElementType;
+  category: string;
+}
+
 interface GlobalSearchProps {
   role: "admin" | "teacher" | "student" | "parent";
 }
@@ -86,9 +95,12 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [dbResults, setDbResults] = useState<DbResult[]>([]);
+  const [dbLoading, setDbLoading] = useState(false);
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const features = role === "admin" ? adminFeatures : role === "teacher" ? teacherFeatures : role === "parent" ? parentFeatures : studentFeatures;
 
@@ -102,8 +114,116 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
           f.category.toLowerCase().includes(q);
       });
 
+  // Live DB search for admin
+  useEffect(() => {
+    if (role !== "admin" || query.trim().length < 2) {
+      setDbResults([]);
+      return;
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setDbLoading(true);
+      const q = query.trim();
+      const results: DbResult[] = [];
+
+      try {
+        const [studentsRes, profilesRes, classesRes, subjectsRes] = await Promise.all([
+          supabase.from("student_profiles").select("user_id, student_id, form, level").limit(50),
+          supabase.from("profiles").select("user_id, full_name, email").ilike("full_name", `%${q}%`).limit(10),
+          supabase.from("classes").select("id, name, form, level").is("deleted_at", null).ilike("name", `%${q}%`).limit(5),
+          supabase.from("subjects").select("id, name, code").is("deleted_at", null).ilike("name", `%${q}%`).limit(5),
+        ]);
+
+        const profileMap = new Map((profilesRes.data || []).map(p => [p.user_id, p]));
+        const studentMap = new Map((studentsRes.data || []).map(s => [s.user_id, s]));
+
+        // Match students by name or student_id
+        for (const [userId, profile] of profileMap) {
+          const sp = studentMap.get(userId);
+          if (sp) {
+            results.push({
+              label: profile.full_name,
+              description: `${sp.student_id || "No ID"} • Form ${sp.form} • ${sp.level?.replace("_", " ").toUpperCase()}`,
+              path: "/admin/students",
+              icon: GraduationCap,
+              category: "Students",
+            });
+          } else {
+            results.push({
+              label: profile.full_name,
+              description: profile.email || "User",
+              path: "/admin/users",
+              icon: User,
+              category: "Users",
+            });
+          }
+        }
+
+        // Also search by student_id
+        if (q.length >= 3) {
+          const { data: sidData } = await supabase.from("student_profiles")
+            .select("user_id, student_id, form, level")
+            .ilike("student_id", `%${q}%`).limit(5);
+          
+          if (sidData) {
+            const existingUserIds = new Set(results.map(r => r.path));
+            const userIds = sidData.map(s => s.user_id).filter(id => !profileMap.has(id));
+            if (userIds.length > 0) {
+              const { data: extraProfiles } = await supabase.from("profiles")
+                .select("user_id, full_name").in("user_id", userIds);
+              const extraMap = new Map((extraProfiles || []).map(p => [p.user_id, p]));
+              for (const s of sidData) {
+                if (!profileMap.has(s.user_id)) {
+                  const p = extraMap.get(s.user_id);
+                  results.push({
+                    label: p?.full_name || "Student",
+                    description: `${s.student_id || "No ID"} • Form ${s.form}`,
+                    path: "/admin/students",
+                    icon: GraduationCap,
+                    category: "Students",
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        // Classes
+        for (const cls of classesRes.data || []) {
+          results.push({
+            label: cls.name,
+            description: `Form ${cls.form} • ${cls.level?.replace("_", " ").toUpperCase()}`,
+            path: "/admin/classes",
+            icon: Users,
+            category: "Classes",
+          });
+        }
+
+        // Subjects
+        for (const sub of subjectsRes.data || []) {
+          results.push({
+            label: sub.name,
+            description: sub.code || "Subject",
+            path: "/admin/subjects",
+            icon: BookOpen,
+            category: "Subjects",
+          });
+        }
+      } catch (err) {
+        // silently fail
+      }
+
+      setDbResults(results);
+      setDbLoading(false);
+    }, 300);
+
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [query, role]);
+
   // Group by category
-  const grouped = filtered.reduce<Record<string, SearchItem[]>>((acc, item) => {
+  const allItems = [...filtered, ...dbResults];
+  const grouped = allItems.reduce<Record<string, (SearchItem | DbResult)[]>>((acc, item) => {
     if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
     return acc;
@@ -132,6 +252,7 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
     else {
       setQuery("");
       setSelectedIndex(0);
+      setDbResults([]);
     }
   }, [open]);
 
@@ -159,7 +280,6 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
     el?.scrollIntoView({ block: "nearest" });
   };
 
-  // Quick suggestions based on time of day
   const getQuickSuggestion = () => {
     const hour = new Date().getHours();
     if (hour < 10) return "Good morning! Start with attendance or dashboard.";
@@ -191,12 +311,13 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Search pages, features, settings..."
+              placeholder="Search pages, students, classes..."
               className="border-0 focus-visible:ring-0 shadow-none h-12 text-base"
             />
-            {query && (
+            {dbLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground shrink-0" />}
+            {query && !dbLoading && (
               <Badge variant="secondary" className="shrink-0 text-[10px]">
-                {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+                {allItems.length} result{allItems.length !== 1 ? "s" : ""}
               </Badge>
             )}
           </div>
@@ -210,7 +331,7 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
           )}
 
           <div ref={listRef} className="max-h-80 overflow-y-auto">
-            {filtered.length === 0 ? (
+            {allItems.length === 0 && !dbLoading ? (
               <div className="text-center py-12 px-4">
                 <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-muted-foreground font-medium">No results for "{query}"</p>
@@ -221,14 +342,17 @@ const GlobalSearch = ({ role }: GlobalSearchProps) => {
                 <div key={category}>
                   <div className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 bg-muted/30 sticky top-0">
                     {category}
+                    {(category === "Students" || category === "Users" || category === "Classes" || category === "Subjects") && (
+                      <span className="ml-1.5 text-secondary">• Live</span>
+                    )}
                   </div>
-                  {items.map(item => {
+                  {items.map((item, i) => {
                     itemIndex++;
                     const idx = itemIndex;
                     const isSelected = idx === selectedIndex;
                     return (
                       <button
-                        key={item.path}
+                        key={`${item.path}-${item.label}-${i}`}
                         onClick={() => go(item.path)}
                         onMouseEnter={() => setSelectedIndex(idx)}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors group ${
