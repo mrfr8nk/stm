@@ -20,7 +20,7 @@ const HeroSection = () => {
       <div className="relative z-10 text-center px-4 max-w-4xl mx-auto pt-20">
         {/* Logo */}
         <div className="mb-6 animate-fade-in-up">
-          <img src={schoolLogo} alt="St. Mary's High School Crest" className="h-28 md:h-36 mx-auto drop-shadow-2xl" />
+          <img src={schoolLogo} alt="St. Mary's High School Crest" className="h-28 md:h-36 mx-auto drop-shadow-2xl" fetchPriority="high" decoding="async" />
         </div>
 
         <h1 className="font-display text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>

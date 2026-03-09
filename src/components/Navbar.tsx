@@ -21,7 +21,7 @@ const Navbar = () => {
     <header className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border shadow-sm transition-all duration-300">
       <div className="container mx-auto px-4 flex items-center justify-between h-20">
         <Link to="/" className="flex items-center gap-3">
-          <img src={schoolLogo} alt="St. Mary's Logo" className="h-12 w-12 object-contain" />
+          <img src={schoolLogo} alt="St. Mary's Logo" className="h-12 w-12 object-contain" fetchPriority="high" decoding="async" />
           <span className="font-display text-xl font-bold text-primary">St. Mary's</span>
         </Link>
 
