@@ -101,7 +101,7 @@ const TeacherAttendance = () => {
       student_id: s.user_id, class_id: selectedClassId, date,
       status: (attendance[s.user_id] || "present") as any, marked_by: user.id,
     }));
-    const { error } = await supabase.from("attendance").upsert(records, { onConflict: "student_id,date" });
+    const { error } = await supabase.from("attendance").upsert(records, { onConflict: "student_id,class_id,date" });
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
