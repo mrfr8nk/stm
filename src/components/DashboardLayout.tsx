@@ -43,6 +43,7 @@ const studentNav: NavItem[] = [
   { label: "Messages", path: "/student/messages", icon: MessageSquare },
   { label: "Announcements", path: "/student/announcements", icon: Bell },
   { label: "Fees", path: "/student/fees", icon: DollarSign },
+  { label: "Verify Documents", path: "/student/verify", icon: ShieldCheck },
   { label: "Settings", path: "/student/profile", icon: Settings },
 ];
 
