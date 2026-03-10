@@ -373,6 +373,59 @@ export type Database = {
         }
         Relationships: []
       }
+      fee_payments: {
+        Row: {
+          amount_original: number
+          amount_usd: number
+          created_at: string
+          currency: string
+          fee_record_id: string
+          id: string
+          notes: string | null
+          paid_by: string | null
+          payment_method: string
+          receipt_image_url: string | null
+          receipt_number: string | null
+          student_id: string
+        }
+        Insert: {
+          amount_original: number
+          amount_usd: number
+          created_at?: string
+          currency?: string
+          fee_record_id: string
+          id?: string
+          notes?: string | null
+          paid_by?: string | null
+          payment_method?: string
+          receipt_image_url?: string | null
+          receipt_number?: string | null
+          student_id: string
+        }
+        Update: {
+          amount_original?: number
+          amount_usd?: number
+          created_at?: string
+          currency?: string
+          fee_record_id?: string
+          id?: string
+          notes?: string | null
+          paid_by?: string | null
+          payment_method?: string
+          receipt_image_url?: string | null
+          receipt_number?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_payments_fee_record_id_fkey"
+            columns: ["fee_record_id"]
+            isOneToOne: false
+            referencedRelation: "fee_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fee_records: {
         Row: {
           academic_year: number

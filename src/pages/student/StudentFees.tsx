@@ -5,7 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Printer, FileDown, GraduationCap } from "lucide-react";
+import { DollarSign, Printer, GraduationCap, History, ChevronDown, ChevronUp } from "lucide-react";
 import { printReceipt } from "@/components/admin/fees/ReceiptPrinter";
 import { methodLabel, DEFAULT_ZIG_RATE } from "@/components/admin/fees/FeeConstants";
 
@@ -15,6 +15,8 @@ const StudentFees = () => {
   const [studentName, setStudentName] = useState("");
   const [className, setClassName] = useState<string | undefined>(undefined);
   const [scholarship, setScholarship] = useState<any>(null);
+  const [paymentHistory, setPaymentHistory] = useState<Record<string, any[]>>({});
+  const [expandedFee, setExpandedFee] = useState<string | null>(null);
   const zigRate = DEFAULT_ZIG_RATE;
 
   useEffect(() => {
@@ -36,6 +38,14 @@ const StudentFees = () => {
         setScholarship(active || null);
       });
   }, [user]);
+
+  const loadPaymentHistory = async (feeId: string) => {
+    if (expandedFee === feeId) { setExpandedFee(null); return; }
+    setExpandedFee(feeId);
+    if (paymentHistory[feeId]) return;
+    const { data } = await supabase.from("fee_payments" as any).select("*").eq("fee_record_id", feeId).order("created_at", { ascending: true }) as any;
+    setPaymentHistory(prev => ({ ...prev, [feeId]: data || [] }));
+  };
 
   const totalDue = fees.reduce((s, f) => s + Number(f.amount_due), 0);
   const totalPaid = fees.reduce((s, f) => s + Number(f.amount_paid), 0);
@@ -105,12 +115,8 @@ const StudentFees = () => {
                   <TableHead>Year</TableHead>
                   <TableHead>Term</TableHead>
                   <TableHead>Due (USD)</TableHead>
-                  <TableHead>Due (ZIG)</TableHead>
                   <TableHead>Paid</TableHead>
                   <TableHead>Balance</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead>Receipt</TableHead>
-                  <TableHead>Payment Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -119,40 +125,74 @@ const StudentFees = () => {
                 {fees.map((f) => {
                   const balance = Number(f.amount_due) - Number(f.amount_paid);
                   const isPaid = balance <= 0;
+                  const isExpanded = expandedFee === f.id;
+                  const history = paymentHistory[f.id] || [];
                   return (
-                    <TableRow key={f.id}>
-                      <TableCell>{f.academic_year}</TableCell>
-                      <TableCell>{f.term.replace("_", " ").toUpperCase()}</TableCell>
-                      <TableCell>${Number(f.amount_due).toFixed(2)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">ZIG {(Number(f.amount_due) * zigRate).toFixed(0)}</TableCell>
-                      <TableCell className="text-green-600 font-medium">${Number(f.amount_paid).toFixed(2)}</TableCell>
-                      <TableCell className={`font-bold ${isPaid ? "text-green-600" : "text-destructive"}`}>
-                        ${balance.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-xs">{methodLabel((f as any).payment_method)}</TableCell>
-                      <TableCell className="text-xs font-mono">{f.receipt_number || "—"}</TableCell>
-                      <TableCell className="text-sm">
-                        {f.payment_date ? new Date(f.payment_date).toLocaleDateString() : "—"}
-                        <span className="text-xs text-muted-foreground ml-1">{new Date(f.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${isPaid ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                          {isPaid ? "Paid" : "Owing"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {f.receipt_number && (
-                          <Button variant="ghost" size="sm" onClick={() => printReceipt(f, studentName, zigRate, className)}>
-                            <Printer className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
+                    <>
+                      <TableRow key={f.id} className="cursor-pointer hover:bg-muted/50" onClick={() => loadPaymentHistory(f.id)}>
+                        <TableCell>{f.academic_year}</TableCell>
+                        <TableCell>{f.term.replace("_", " ").toUpperCase()}</TableCell>
+                        <TableCell>${Number(f.amount_due).toFixed(2)}</TableCell>
+                        <TableCell className="text-green-600 font-medium">${Number(f.amount_paid).toFixed(2)}</TableCell>
+                        <TableCell className={`font-bold ${isPaid ? "text-green-600" : "text-destructive"}`}>
+                          ${balance.toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${isPaid ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            {isPaid ? "Paid" : "Owing"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); loadPaymentHistory(f.id); }} title="Payment History">
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </Button>
+                            {f.receipt_number && (
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); printReceipt(f, studentName, zigRate, className); }}>
+                                <Printer className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && (
+                        <TableRow key={`${f.id}-history`}>
+                          <TableCell colSpan={7} className="bg-muted/30 p-0">
+                            <div className="p-3">
+                              <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                                <History className="w-3 h-3" /> Individual Payments
+                              </p>
+                              {history.length === 0 ? (
+                                <p className="text-xs text-muted-foreground text-center py-2">No individual payment records.</p>
+                              ) : (
+                                <div className="space-y-1">
+                                  {history.map((p: any, i: number) => (
+                                    <div key={p.id} className="flex items-center justify-between text-xs bg-background rounded px-3 py-2 border border-border">
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-muted-foreground font-mono w-5">{i + 1}.</span>
+                                        <span>{new Date(p.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                                        <span className="text-muted-foreground">{new Date(p.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-muted-foreground">{methodLabel(p.payment_method)}</span>
+                                        <span className="font-bold text-green-600">${Number(p.amount_usd).toFixed(2)}</span>
+                                        {p.currency === "ZIG" && <span className="text-muted-foreground">(ZIG {Number(p.amount_original).toFixed(0)})</span>}
+                                        <span className="font-mono text-muted-foreground">{p.receipt_number || ""}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
                   );
                 })}
                 {fees.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">No fee records found.</TableCell>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No fee records found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>

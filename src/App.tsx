@@ -80,6 +80,10 @@ import ParentSettings from "./pages/parent/ParentSettings";
 import VerifyReport from "./pages/VerifyReport";
 import Credits from "./pages/Credits";
 
+import StudentVerify from "./pages/student/StudentVerify";
+import TeacherVerify from "./pages/teacher/TeacherVerify";
+import ParentVerify from "./pages/parent/ParentVerify";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -118,6 +122,7 @@ const App = () => (
               <Route path="/teacher/announcements" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherAnnouncements /></ProtectedRoute>} />
               <Route path="/teacher/record-book" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherRecordBook /></ProtectedRoute>} />
               <Route path="/teacher/profile" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherProfile /></ProtectedRoute>} />
+              <Route path="/teacher/verify" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherVerify /></ProtectedRoute>} />
 
               {/* Student Portal */}
               <Route path="/student" element={<ProtectedRoute allowedRoles={["student"]}><StudentDashboard /></ProtectedRoute>} />
@@ -130,6 +135,7 @@ const App = () => (
               <Route path="/student/study-pal" element={<ProtectedRoute allowedRoles={["student"]}><StudentStudyPal /></ProtectedRoute>} />
               <Route path="/student/rankings" element={<ProtectedRoute allowedRoles={["student"]}><StudentRankings /></ProtectedRoute>} />
               <Route path="/student/messages" element={<ProtectedRoute allowedRoles={["student"]}><StudentMessages /></ProtectedRoute>} />
+              <Route path="/student/verify" element={<ProtectedRoute allowedRoles={["student"]}><StudentVerify /></ProtectedRoute>} />
 
               {/* Admin Portal */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
@@ -161,6 +167,7 @@ const App = () => (
               <Route path="/parent/messages" element={<ProtectedRoute allowedRoles={["parent"]}><ParentMessages /></ProtectedRoute>} />
               <Route path="/parent/reports" element={<ProtectedRoute allowedRoles={["parent"]}><ParentReports /></ProtectedRoute>} />
               <Route path="/parent/settings" element={<ProtectedRoute allowedRoles={["parent"]}><ParentSettings /></ProtectedRoute>} />
+              <Route path="/parent/verify" element={<ProtectedRoute allowedRoles={["parent"]}><ParentVerify /></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

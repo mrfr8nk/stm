@@ -39,6 +39,7 @@ const PaymentDialog = ({ record, open, onOpenChange, zigRate, getStudentName, ge
     const newPaid = Number(record.amount_paid) + payUSD;
     const receipt = generateReceipt();
 
+    // Update the fee record
     const { error } = await supabase.from("fee_records").update({
       amount_paid: Math.round(newPaid * 100) / 100,
       receipt_number: receipt,
@@ -47,37 +48,50 @@ const PaymentDialog = ({ record, open, onOpenChange, zigRate, getStudentName, ge
       receipt_image_url: receiptImage,
     } as any).eq("id", record.id);
 
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else {
-      toast({ title: "Payment Recorded", description: `Receipt: ${receipt} — $${payUSD.toFixed(2)} paid` });
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
 
-      // Send receipt email to student
-      const studentEmail = getStudentEmail(record.student_id);
-      if (studentEmail) {
-        supabase.functions.invoke("send-branded-email", {
-          body: {
-            email: studentEmail,
-            type: "fee_receipt",
-            receipt_data: {
-              studentName: getStudentName(record.student_id),
-              receiptNumber: receipt,
-              academicYear: record.academic_year,
-              term: record.term,
-              amountDue: Number(record.amount_due),
-              amountPaid: newPaid,
-              paymentMethod: methodLabel(method),
-              paymentDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + " at " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-              className: getStudentClass?.(record.student_id),
-            },
+    // Log individual payment to fee_payments table
+    const user = (await supabase.auth.getUser()).data.user;
+    await supabase.from("fee_payments" as any).insert({
+      fee_record_id: record.id,
+      student_id: record.student_id,
+      amount_usd: Math.round(payUSD * 100) / 100,
+      amount_original: raw,
+      currency,
+      payment_method: method,
+      receipt_number: receipt,
+      receipt_image_url: receiptImage,
+      paid_by: user?.id,
+    } as any);
+
+    toast({ title: "Payment Recorded", description: `Receipt: ${receipt} — $${payUSD.toFixed(2)} paid` });
+
+    // Send receipt email to student
+    const studentEmail = getStudentEmail(record.student_id);
+    if (studentEmail) {
+      supabase.functions.invoke("send-branded-email", {
+        body: {
+          email: studentEmail,
+          type: "fee_receipt",
+          receipt_data: {
+            studentName: getStudentName(record.student_id),
+            receiptNumber: receipt,
+            academicYear: record.academic_year,
+            term: record.term,
+            amountDue: Number(record.amount_due),
+            amountPaid: newPaid,
+            paymentMethod: methodLabel(method),
+            paymentDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + " at " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+            className: getStudentClass?.(record.student_id),
           },
-        }).catch(() => {});
-      }
-
-      setAmount("");
-      setReceiptImage(null);
-      onOpenChange(false);
-      onPaid();
+        },
+      }).catch(() => {});
     }
+
+    setAmount("");
+    setReceiptImage(null);
+    onOpenChange(false);
+    onPaid();
   };
 
   return (

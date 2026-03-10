@@ -7,7 +7,7 @@ import GlobalSearch from "@/components/GlobalSearch";
 import {
   Menu, X, LogOut, Home, Users, BookOpen, ClipboardCheck,
   FileText, Bell, Settings, BarChart3, Key, GraduationCap,
-  DollarSign, User, Receipt, MessageSquare, Trophy, Newspaper, Image, History, ShieldAlert
+  DollarSign, User, Receipt, MessageSquare, Trophy, Newspaper, Image, History, ShieldAlert, ShieldCheck
 } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
 import NotificationBell from "@/components/NotificationBell";
@@ -29,6 +29,7 @@ const teacherNav: NavItem[] = [
   { label: "Messages", path: "/teacher/messages", icon: MessageSquare },
   { label: "Announcements", path: "/teacher/announcements", icon: Bell },
   { label: "Record Book", path: "/teacher/record-book", icon: BookOpen },
+  { label: "Verify Documents", path: "/teacher/verify", icon: ShieldCheck },
   { label: "Settings", path: "/teacher/profile", icon: Settings },
 ];
 
@@ -42,6 +43,7 @@ const studentNav: NavItem[] = [
   { label: "Messages", path: "/student/messages", icon: MessageSquare },
   { label: "Announcements", path: "/student/announcements", icon: Bell },
   { label: "Fees", path: "/student/fees", icon: DollarSign },
+  { label: "Verify Documents", path: "/student/verify", icon: ShieldCheck },
   { label: "Settings", path: "/student/profile", icon: Settings },
 ];
 
@@ -75,6 +77,7 @@ const parentNav: NavItem[] = [
   { label: "Attendance", path: "/parent/attendance", icon: ClipboardCheck },
   { label: "Fees", path: "/parent/fees", icon: DollarSign },
   { label: "Messages", path: "/parent/messages", icon: MessageSquare },
+  { label: "Verify Documents", path: "/parent/verify", icon: ShieldCheck },
   { label: "Settings", path: "/parent/settings", icon: Settings },
 ];
 
