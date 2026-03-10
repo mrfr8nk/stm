@@ -4,7 +4,9 @@ import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
-import { DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DollarSign, History, ChevronDown, ChevronUp } from "lucide-react";
+import { methodLabel } from "@/components/admin/fees/FeeConstants";
 
 const ParentFees = () => {
   const { user } = useAuth();
@@ -12,6 +14,8 @@ const ParentFees = () => {
   const [fees, setFees] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [paymentHistory, setPaymentHistory] = useState<Record<string, any[]>>({});
+  const [expandedFee, setExpandedFee] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -34,6 +38,14 @@ const ParentFees = () => {
   }, [user]);
 
   const getName = (uid: string) => profiles.find(p => p.user_id === uid)?.full_name || "Student";
+
+  const loadPaymentHistory = async (feeId: string) => {
+    if (expandedFee === feeId) { setExpandedFee(null); return; }
+    setExpandedFee(feeId);
+    if (paymentHistory[feeId]) return;
+    const { data } = await supabase.from("fee_payments" as any).select("*").eq("fee_record_id", feeId).order("created_at", { ascending: true }) as any;
+    setPaymentHistory(prev => ({ ...prev, [feeId]: data || [] }));
+  };
 
   return (
     <DashboardLayout role="parent">
@@ -68,24 +80,71 @@ const ParentFees = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Year</TableHead><TableHead>Term</TableHead><TableHead>Due</TableHead>
-                        <TableHead>Paid</TableHead><TableHead>Balance</TableHead><TableHead>Method</TableHead>
+                        <TableHead>Paid</TableHead><TableHead>Balance</TableHead><TableHead>Status</TableHead><TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {childFees.length === 0 ? (
-                        <TableRow><TableCell colSpan={6} className="text-center py-4 text-muted-foreground">No fee records.</TableCell></TableRow>
-                      ) : childFees.map(f => (
-                        <TableRow key={f.id}>
-                          <TableCell>{f.academic_year}</TableCell>
-                          <TableCell>{f.term.replace("_", " ").toUpperCase()}</TableCell>
-                          <TableCell>${Number(f.amount_due).toFixed(2)}</TableCell>
-                          <TableCell className="text-green-600">${Number(f.amount_paid).toFixed(2)}</TableCell>
-                          <TableCell className={Number(f.amount_due) - Number(f.amount_paid) > 0 ? "text-destructive font-bold" : "text-green-600"}>
-                            ${(Number(f.amount_due) - Number(f.amount_paid)).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-sm">{f.payment_method || "—"}</TableCell>
-                        </TableRow>
-                      ))}
+                        <TableRow><TableCell colSpan={7} className="text-center py-4 text-muted-foreground">No fee records.</TableCell></TableRow>
+                      ) : childFees.map(f => {
+                        const bal = Number(f.amount_due) - Number(f.amount_paid);
+                        const isPaid = bal <= 0;
+                        const isExpanded = expandedFee === f.id;
+                        const history = paymentHistory[f.id] || [];
+                        return (
+                          <>
+                            <TableRow key={f.id} className="cursor-pointer hover:bg-muted/50" onClick={() => loadPaymentHistory(f.id)}>
+                              <TableCell>{f.academic_year}</TableCell>
+                              <TableCell>{f.term.replace("_", " ").toUpperCase()}</TableCell>
+                              <TableCell>${Number(f.amount_due).toFixed(2)}</TableCell>
+                              <TableCell className="text-green-600">${Number(f.amount_paid).toFixed(2)}</TableCell>
+                              <TableCell className={bal > 0 ? "text-destructive font-bold" : "text-green-600"}>
+                                ${bal.toFixed(2)}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${isPaid ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                  {isPaid ? "Paid" : "Owing"}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); loadPaymentHistory(f.id); }}>
+                                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                            {isExpanded && (
+                              <TableRow key={`${f.id}-history`}>
+                                <TableCell colSpan={7} className="bg-muted/30 p-0">
+                                  <div className="p-3">
+                                    <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                                      <History className="w-3 h-3" /> Individual Payments
+                                    </p>
+                                    {history.length === 0 ? (
+                                      <p className="text-xs text-muted-foreground text-center py-2">No individual payment records.</p>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        {history.map((p: any, i: number) => (
+                                          <div key={p.id} className="flex items-center justify-between text-xs bg-background rounded px-3 py-2 border border-border">
+                                            <div className="flex items-center gap-3">
+                                              <span className="text-muted-foreground font-mono w-5">{i + 1}.</span>
+                                              <span>{new Date(p.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                              <span className="text-muted-foreground">{methodLabel(p.payment_method)}</span>
+                                              <span className="font-bold text-green-600">${Number(p.amount_usd).toFixed(2)}</span>
+                                              <span className="font-mono text-muted-foreground">{p.receipt_number || ""}</span>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </CardContent>
