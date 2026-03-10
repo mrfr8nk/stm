@@ -80,6 +80,10 @@ import ParentSettings from "./pages/parent/ParentSettings";
 import VerifyReport from "./pages/VerifyReport";
 import Credits from "./pages/Credits";
 
+import StudentVerify from "./pages/student/StudentVerify";
+import TeacherVerify from "./pages/teacher/TeacherVerify";
+import ParentVerify from "./pages/parent/ParentVerify";
+
 const queryClient = new QueryClient();
 
 const App = () => (
