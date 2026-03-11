@@ -52,7 +52,7 @@ const PaymentDialog = ({ record, open, onOpenChange, zigRate, getStudentName, ge
 
     // Log individual payment to fee_payments table
     const user = (await supabase.auth.getUser()).data.user;
-    await supabase.from("fee_payments" as any).insert({
+    await supabase.from("fee_payments").insert({
       fee_record_id: record.id,
       student_id: record.student_id,
       amount_usd: Math.round(payUSD * 100) / 100,
@@ -62,7 +62,7 @@ const PaymentDialog = ({ record, open, onOpenChange, zigRate, getStudentName, ge
       receipt_number: receipt,
       receipt_image_url: receiptImage,
       paid_by: user?.id,
-    } as any);
+    });
 
     toast({ title: "Payment Recorded", description: `Receipt: ${receipt} — $${payUSD.toFixed(2)} paid` });
 
