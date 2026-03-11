@@ -46,7 +46,7 @@ const PaymentDialog = ({ record, open, onOpenChange, zigRate, getStudentName, ge
       payment_date: new Date().toISOString().split("T")[0],
       payment_method: method,
       receipt_image_url: receiptImage,
-    } as any).eq("id", record.id);
+    }).eq("id", record.id);
 
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
 
