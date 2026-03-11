@@ -1,16 +1,19 @@
 import headmasterImg from "@/assets/headmaster.jpg";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 const HeadmasterSection = () => {
+  const { ref, isVisible } = useScrollReveal();
+
   return (
     <section className="py-20 bg-muted">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
+      <div className="container mx-auto px-4" ref={ref}>
+        <div className={`text-center mb-12 transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
           <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">A Fountain of Wisdom</h2>
           <div className="w-16 h-1 bg-secondary mx-auto rounded-full" />
         </div>
 
         <div className="grid md:grid-cols-[300px_1fr] gap-10 items-start max-w-5xl mx-auto">
-          <div className="relative">
+          <div className={`relative transition-all duration-700 delay-200 ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
             <img
               src={headmasterImg}
               alt="Mr. Nyabako - Head Master"
@@ -19,7 +22,7 @@ const HeadmasterSection = () => {
             <div className="absolute -top-4 -left-4 text-7xl font-display text-secondary opacity-40 select-none">"</div>
           </div>
 
-          <div>
+          <div className={`transition-all duration-700 delay-400 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
             <h3 className="font-display text-2xl font-bold text-primary mb-1">Mr. Nyabako</h3>
             <p className="font-body text-secondary font-semibold mb-6">Head Master</p>
 

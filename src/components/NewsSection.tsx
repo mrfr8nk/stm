@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 const NewsSection = () => {
   const [updates, setUpdates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { ref, isVisible } = useScrollReveal();
 
   useEffect(() => {
     supabase
@@ -26,17 +28,18 @@ const NewsSection = () => {
 
   return (
     <section className="py-20 bg-background">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
+      <div className="container mx-auto px-4" ref={ref}>
+        <div className={`text-center mb-12 transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
           <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">Latest News & Updates</h2>
           <div className="w-16 h-1 bg-secondary mx-auto rounded-full" />
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {updates.map((item) => (
+          {updates.map((item, i) => (
             <div
               key={item.id}
-              className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-2 transition-all duration-300 border border-border"
+              className={`bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-2 transition-all duration-500 border border-border ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}
+              style={{ transitionDelay: isVisible ? `${200 + i * 150}ms` : "0ms" }}
             >
               {item.image_url ? (
                 <div className="h-48 overflow-hidden">
@@ -59,7 +62,7 @@ const NewsSection = () => {
           ))}
         </div>
 
-        <div className="text-center mt-10">
+        <div className={`text-center mt-10 transition-all duration-700 delay-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
           <Link
             to="/news"
             className="inline-block bg-primary text-primary-foreground px-6 py-3 rounded-lg font-body font-semibold hover:opacity-90 transition-opacity"
