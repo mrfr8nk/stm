@@ -1,4 +1,5 @@
 import { FlaskConical, Paintbrush, TrendingUp } from "lucide-react";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 const programs = [
   {
@@ -19,19 +20,22 @@ const programs = [
 ];
 
 const AcademicsSection = () => {
+  const { ref, isVisible } = useScrollReveal();
+
   return (
     <section className="py-20 bg-background">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
+      <div className="container mx-auto px-4" ref={ref}>
+        <div className={`text-center mb-12 transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
           <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">Our Academic Programs</h2>
           <div className="w-16 h-1 bg-secondary mx-auto rounded-full" />
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {programs.map((program) => (
+          {programs.map((program, i) => (
             <div
               key={program.title}
-              className="bg-card rounded-2xl p-8 shadow-card hover:shadow-card-hover hover:-translate-y-2 transition-all duration-300 border border-border group"
+              className={`bg-card rounded-2xl p-8 shadow-card hover:shadow-card-hover hover:-translate-y-2 transition-all duration-500 border border-border group ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}
+              style={{ transitionDelay: isVisible ? `${200 + i * 150}ms` : "0ms" }}
             >
               <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-secondary/20 transition-colors">
                 <program.icon className="w-8 h-8 text-primary" />

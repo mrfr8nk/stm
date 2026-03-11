@@ -43,7 +43,7 @@ const ParentFees = () => {
     if (expandedFee === feeId) { setExpandedFee(null); return; }
     setExpandedFee(feeId);
     if (paymentHistory[feeId]) return;
-    const { data } = await supabase.from("fee_payments" as any).select("*").eq("fee_record_id", feeId).order("created_at", { ascending: true }) as any;
+    const { data } = await supabase.from("fee_payments").select("*").eq("fee_record_id", feeId).order("created_at", { ascending: true });
     setPaymentHistory(prev => ({ ...prev, [feeId]: data || [] }));
   };
 

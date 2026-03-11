@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, ArrowLeft, Send, CheckCircle2, RefreshCw } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
+import { supabase } from "@/integrations/supabase/client";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -17,23 +18,20 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-branded-email`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.trim(),
-            type: 'reset_password',
-            redirect_url: `${window.location.origin}/reset-password`,
-          }),
-        }
-      );
+      // Use the site's own published URL for the reset redirect
+      const siteUrl = window.location.origin;
+      const redirectUrl = `${siteUrl}/reset-password`;
 
-      const result = await res.json();
+      const { error } = await supabase.functions.invoke("send-branded-email", {
+        body: {
+          email: email.trim(),
+          type: "reset_password",
+          redirect_url: redirectUrl,
+        },
+      });
 
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to send email');
+      if (error) {
+        throw new Error(error.message || "Failed to send email");
       }
 
       setSent(true);
