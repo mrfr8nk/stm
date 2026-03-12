@@ -64,28 +64,60 @@ const PaymentDialog = ({ record, open, onOpenChange, zigRate, getStudentName, ge
       paid_by: user?.id,
     });
 
+    // Create notification for the student
+    await supabase.from("notifications").insert({
+      user_id: record.student_id,
+      title: "💰 Payment Received",
+      message: `A payment of $${payUSD.toFixed(2)} has been recorded for ${record.term.replace("_", " ").toUpperCase()} ${record.academic_year}. Receipt: ${receipt}`,
+      type: "success",
+      metadata: { receipt_number: receipt, amount: payUSD, term: record.term, academic_year: record.academic_year },
+    });
+
+    // Notify linked parents
+    const { data: parentLinks } = await supabase.from("parent_student_links").select("parent_id").eq("student_id", record.student_id);
+    if (parentLinks && parentLinks.length > 0) {
+      const parentNotifications = parentLinks.map(link => ({
+        user_id: link.parent_id,
+        title: "💰 Child Fee Payment",
+        message: `A payment of $${payUSD.toFixed(2)} was recorded for ${getStudentName(record.student_id)} — ${record.term.replace("_", " ").toUpperCase()} ${record.academic_year}. Receipt: ${receipt}`,
+        type: "success",
+        metadata: { receipt_number: receipt, amount: payUSD, student_id: record.student_id },
+      }));
+      await supabase.from("notifications").insert(parentNotifications);
+    }
+
     toast({ title: "Payment Recorded", description: `Receipt: ${receipt} — $${payUSD.toFixed(2)} paid` });
 
     // Send receipt email to student
     const studentEmail = getStudentEmail(record.student_id);
+    const receiptEmailData = {
+      studentName: getStudentName(record.student_id),
+      receiptNumber: receipt,
+      academicYear: record.academic_year,
+      term: record.term,
+      amountDue: Number(record.amount_due),
+      amountPaid: newPaid,
+      paymentMethod: methodLabel(method),
+      paymentDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + " at " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+      className: getStudentClass?.(record.student_id),
+    };
+
     if (studentEmail) {
       supabase.functions.invoke("send-branded-email", {
-        body: {
-          email: studentEmail,
-          type: "fee_receipt",
-          receipt_data: {
-            studentName: getStudentName(record.student_id),
-            receiptNumber: receipt,
-            academicYear: record.academic_year,
-            term: record.term,
-            amountDue: Number(record.amount_due),
-            amountPaid: newPaid,
-            paymentMethod: methodLabel(method),
-            paymentDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + " at " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-            className: getStudentClass?.(record.student_id),
-          },
-        },
+        body: { email: studentEmail, type: "fee_receipt", receipt_data: receiptEmailData },
       }).catch(() => {});
+    }
+
+    // Forward receipt email to linked parents
+    if (parentLinks && parentLinks.length > 0) {
+      const { data: parentProfiles } = await supabase.from("profiles").select("user_id, email").in("user_id", parentLinks.map(l => l.parent_id));
+      (parentProfiles || []).forEach(p => {
+        if (p.email) {
+          supabase.functions.invoke("send-branded-email", {
+            body: { email: p.email, type: "fee_receipt", receipt_data: receiptEmailData },
+          }).catch(() => {});
+        }
+      });
     }
 
     setAmount("");
