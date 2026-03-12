@@ -123,41 +123,6 @@ const TeacherGrades = () => {
       toast({ title: "Grades Saved", description: `Saved ${upserts.length} grades.` });
       await supabase.from("activity_log").insert({ user_id: user.id, action: "Saved grades", details: `${selectedAssignment.subjects?.name} - ${term.replace("_", " ")}`, entity_type: "grades" });
 
-      // Send grade notification emails
-      const subjectName = selectedAssignment.subjects?.name || "Subject";
-      const className = selectedAssignment.classes?.name || "Class";
-      const level = selectedAssignment.classes?.level || "o_level";
-
-      for (const upsert of upserts) {
-        const student = students.find(s => s.user_id === upsert.student_id);
-        if (!student) continue;
-        const studentEmail = student.profiles?.email;
-        const guardianEmail = student.guardian_email;
-        const gradeLetter = grades[upsert.student_id]?.mark ? 
-          (await supabase.rpc("calculate_grade", { _mark: upsert.mark, _level: level })).data || "" : "";
-
-        const gradeData = {
-          studentName: student.profiles?.full_name || "Student",
-          subjectName,
-          mark: upsert.mark,
-          grade: gradeLetter,
-          term,
-          className,
-          comment: upsert.comment || undefined,
-        };
-
-        if (studentEmail) {
-          supabase.functions.invoke("send-branded-email", {
-            body: { email: studentEmail, type: "grade_notification", grade_data: gradeData },
-          }).catch(() => {});
-        }
-        if (guardianEmail && guardianEmail !== studentEmail) {
-          supabase.functions.invoke("send-branded-email", {
-            body: { email: guardianEmail, type: "grade_notification", grade_data: gradeData },
-          }).catch(() => {});
-        }
-      }
-
       fetchGrades();
     }
     setSaving(false);

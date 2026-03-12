@@ -215,35 +215,54 @@ const StudentDashboard = () => {
 
         {/* Grades & Attendance */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Recent Grades</CardTitle>
-                <Link to="/student/grades" className="text-sm text-primary hover:underline">View all</Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {recentGrades.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-4">No grades yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {recentGrades.map(g => (
-                    <div key={g.id} className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${
-                      Number(g.mark) >= 75 ? "border-l-green-500 bg-green-500/5" :
-                      Number(g.mark) >= 50 ? "border-l-yellow-500 bg-yellow-500/5" :
-                      "border-l-red-500 bg-red-500/5"
-                    }`}>
-                      <span className="font-medium text-sm">{g.subjects?.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm">{g.mark}%</span>
-                        {g.grade_letter && <Badge variant="outline" className="text-[10px]">{g.grade_letter}</Badge>}
-                      </div>
-                    </div>
-                  ))}
+          {feeBalance <= 0 && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Recent Grades</CardTitle>
+                  <Link to="/student/grades" className="text-sm text-primary hover:underline">View all</Link>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                {recentGrades.length === 0 ? (
+                  <p className="text-muted-foreground text-sm py-4">No grades yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {recentGrades.map(g => (
+                      <div key={g.id} className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${
+                        Number(g.mark) >= 75 ? "border-l-green-500 bg-green-500/5" :
+                        Number(g.mark) >= 50 ? "border-l-yellow-500 bg-yellow-500/5" :
+                        "border-l-red-500 bg-red-500/5"
+                      }`}>
+                        <span className="font-medium text-sm">{g.subjects?.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm">{g.mark}%</span>
+                          {g.grade_letter && <Badge variant="outline" className="text-[10px]">{g.grade_letter}</Badge>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          {feeBalance > 0 && (
+            <Card className="border-destructive/30">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="w-5 h-5" /> Grades Restricted
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Your recent grades are hidden because you have an outstanding fee balance of <span className="font-bold text-destructive">${feeBalance.toFixed(2)}</span>. Please clear your balance to view grades.
+                </p>
+                <Link to="/student/fees">
+                  <Button variant="destructive" size="sm" className="mt-3">Pay Fees <ArrowRight className="w-3 h-3 ml-1" /></Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
