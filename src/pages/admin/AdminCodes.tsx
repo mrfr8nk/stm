@@ -131,8 +131,6 @@ const AdminCodes = () => {
                 <label className="text-xs font-medium text-muted-foreground">Role</label>
                 <select className="block border border-input rounded-lg px-3 py-2 bg-background text-sm" value={role} onChange={e => setRole(e.target.value)}>
                   <option value="teacher">Teacher</option>
-                  <option value="student">Student</option>
-                  <option value="parent">Parent</option>
                   <option value="admin">Admin</option>
                 </select>
               </div>

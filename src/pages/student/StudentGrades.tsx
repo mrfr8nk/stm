@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BookOpen, AlertTriangle, ArrowRight } from "lucide-react";
 import ExportDropdown from "@/components/ExportDropdown";
 
 const StudentGrades = () => {
@@ -13,11 +15,17 @@ const StudentGrades = () => {
   const [grades, setGrades] = useState<any[]>([]);
   const [scales, setScales] = useState<any[]>([]);
   const [term, setTerm] = useState("term_1");
+  const [feeBalance, setFeeBalance] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     supabase.from("grading_scales").select("*").order("level").order("min_mark", { ascending: false })
       .then(({ data }) => setScales(data || []));
+    supabase.from("fee_records").select("amount_due, amount_paid").eq("student_id", user.id).is("deleted_at", null)
+      .then(({ data }) => {
+        const bal = (data || []).reduce((sum, f) => sum + Number(f.amount_due) - Number(f.amount_paid), 0);
+        setFeeBalance(bal > 0 ? bal : 0);
+      });
   }, [user]);
 
   useEffect(() => {
@@ -28,6 +36,28 @@ const StudentGrades = () => {
   }, [user, term]);
 
   const levelGroups = ["zjc", "o_level", "a_level"];
+
+  if (feeBalance > 0) {
+    return (
+      <DashboardLayout role="student">
+        <div className="space-y-6">
+          <h1 className="font-display text-2xl font-bold text-foreground">My Grades</h1>
+          <Card className="border-destructive/30">
+            <CardContent className="p-8 text-center space-y-4">
+              <AlertTriangle className="w-12 h-12 mx-auto text-destructive" />
+              <h2 className="text-xl font-bold text-destructive">Grades Restricted</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Your grades are hidden because you have an outstanding fee balance of <span className="font-bold text-destructive">${feeBalance.toFixed(2)}</span>. Please clear your balance to view your grades.
+              </p>
+              <Link to="/student/fees">
+                <Button variant="destructive">View Fee Balance <ArrowRight className="w-4 h-4 ml-1" /></Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout role="student">
