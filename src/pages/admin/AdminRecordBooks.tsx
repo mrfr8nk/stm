@@ -1,16 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
-import { BookOpen, ArrowLeft, Search } from "lucide-react";
+import { BookOpen, ArrowLeft, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import ExportDropdown from "@/components/ExportDropdown";
 
 interface RecordBook {
   id: string;
@@ -42,6 +41,9 @@ interface StudentInfo {
   student_id: string | null;
 }
 
+type SortKey = "index" | "name" | "id" | string;
+type SortDir = "asc" | "desc";
+
 const AdminRecordBooks = () => {
   const [recordBooks, setRecordBooks] = useState<RecordBook[]>([]);
   const [selectedBook, setSelectedBook] = useState<RecordBook | null>(null);
@@ -51,14 +53,16 @@ const AdminRecordBooks = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  // Lookup maps
+  // Detail view state
+  const [detailSearch, setDetailSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
   const [teacherNames, setTeacherNames] = useState<Record<string, string>>({});
   const [classNames, setClassNames] = useState<Record<string, string>>({});
   const [subjectNames, setSubjectNames] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    loadBooks();
-  }, []);
+  useEffect(() => { loadBooks(); }, []);
 
   const loadBooks = async () => {
     setLoading(true);
@@ -67,13 +71,10 @@ const AdminRecordBooks = () => {
       supabase.from("classes").select("id, name").is("deleted_at", null),
       supabase.from("subjects").select("id, name").is("deleted_at", null),
     ]);
-
     const books = (booksRes.data || []) as RecordBook[];
     setRecordBooks(books);
     setClassNames(Object.fromEntries((classesRes.data || []).map(c => [c.id, c.name])));
     setSubjectNames(Object.fromEntries((subjectsRes.data || []).map(s => [s.id, s.name])));
-
-    // Load teacher names
     const teacherIds = [...new Set(books.map(b => b.teacher_id))];
     if (teacherIds.length > 0) {
       const { data } = await supabase.from("profiles").select("user_id, full_name").in("user_id", teacherIds);
@@ -85,6 +86,9 @@ const AdminRecordBooks = () => {
   const loadBookData = useCallback(async (book: RecordBook) => {
     setSelectedBook(book);
     setLoading(true);
+    setDetailSearch("");
+    setSortKey("name");
+    setSortDir("asc");
 
     const [colsRes, studentsRes] = await Promise.all([
       supabase.from("record_book_columns").select("*").eq("record_book_id", book.id).order("display_order"),
@@ -92,7 +96,6 @@ const AdminRecordBooks = () => {
         ? supabase.from("student_profiles").select("user_id").eq("class_id", book.class_id).eq("is_active", true)
         : Promise.resolve({ data: [] }),
     ]);
-
     const cols = (colsRes.data || []) as RecordColumn[];
     setColumns(cols);
 
@@ -126,6 +129,54 @@ const AdminRecordBooks = () => {
     return entries.find(e => e.student_id === studentId && e.column_id === colId)?.value || "—";
   };
 
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="w-3 h-3 ml-1 inline opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="w-3 h-3 ml-1 inline text-primary" /> : <ArrowDown className="w-3 h-3 ml-1 inline text-primary" />;
+  };
+
+  // Filtered & sorted students for detail view
+  const processedStudents = useMemo(() => {
+    let list = students;
+    if (detailSearch) {
+      const q = detailSearch.toLowerCase();
+      list = list.filter(s =>
+        s.full_name.toLowerCase().includes(q) ||
+        (s.student_id || "").toLowerCase().includes(q)
+      );
+    }
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "name" || sortKey === "index") {
+        cmp = a.full_name.localeCompare(b.full_name);
+      } else if (sortKey === "id") {
+        cmp = (a.student_id || "").localeCompare(b.student_id || "");
+      } else {
+        // Sort by column value
+        const valA = getCellValue(a.user_id, sortKey);
+        const valB = getCellValue(b.user_id, sortKey);
+        const numA = parseFloat(valA);
+        const numB = parseFloat(valB);
+        if (!isNaN(numA) && !isNaN(numB)) cmp = numA - numB;
+        else cmp = valA.localeCompare(valB);
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [students, detailSearch, sortKey, sortDir, entries]);
+
+  // Export data for detail view
+  const exportHeaders = ["#", "Student", "ID", ...columns.map(c => c.name)];
+  const exportRows = processedStudents.map((s, idx) => [
+    idx + 1,
+    s.full_name,
+    s.student_id || "—",
+    ...columns.map(c => getCellValue(s.user_id, c.id)),
+  ]);
+
   const filtered = recordBooks.filter(b => {
     const q = search.toLowerCase();
     if (!q) return true;
@@ -153,6 +204,27 @@ const AdminRecordBooks = () => {
             </div>
           </div>
 
+          {/* Controls bar */}
+          <Card className="mb-2">
+            <CardContent className="p-3 flex flex-wrap gap-3 items-center justify-between">
+              <div className="relative flex-1 max-w-xs min-w-[180px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input placeholder="Search students..." value={detailSearch} onChange={e => setDetailSearch(e.target.value)} className="pl-9 h-9" />
+              </div>
+              <div className="flex gap-2 items-center">
+                <span className="text-xs text-muted-foreground">{processedStudents.length} students</span>
+                <ExportDropdown
+                  title={selectedBook.name}
+                  filename={`record_book_${selectedBook.name.replace(/\s+/g, '_')}`}
+                  headers={exportHeaders}
+                  rows={exportRows}
+                  subtitle={`Teacher: ${teacherNames[selectedBook.teacher_id] || "Unknown"} | Class: ${selectedBook.class_id ? classNames[selectedBook.class_id] : "N/A"} | Subject: ${selectedBook.subject_id ? subjectNames[selectedBook.subject_id] : "N/A"}`}
+                  disabled={processedStudents.length === 0}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {loading ? <Skeleton className="h-96" /> : students.length === 0 ? (
             <Card><CardContent className="py-12 text-center text-muted-foreground">No students in this class.</CardContent></Card>
           ) : columns.length === 0 ? (
@@ -164,21 +236,24 @@ const AdminRecordBooks = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="sticky left-0 bg-card z-10 min-w-[50px]">#</TableHead>
-                        <TableHead className="sticky left-[50px] bg-card z-10 min-w-[180px]">Student</TableHead>
-                        <TableHead className="min-w-[100px]">ID</TableHead>
+                        <TableHead className="sticky left-0 bg-card z-10 min-w-[50px] cursor-pointer select-none" onClick={() => toggleSort("index")}># <SortIcon col="index" /></TableHead>
+                        <TableHead className="sticky left-[50px] bg-card z-10 min-w-[180px] cursor-pointer select-none" onClick={() => toggleSort("name")}>Student <SortIcon col="name" /></TableHead>
+                        <TableHead className="min-w-[100px] cursor-pointer select-none" onClick={() => toggleSort("id")}>ID <SortIcon col="id" /></TableHead>
                         {columns.map(col => (
-                          <TableHead key={col.id} className="min-w-[120px]">
+                          <TableHead key={col.id} className="min-w-[120px] cursor-pointer select-none" onClick={() => toggleSort(col.id)}>
                             <div className="flex items-center gap-1">
                               <span>{col.name}</span>
                               <Badge variant="outline" className="text-[10px] px-1 py-0">{col.column_type}</Badge>
+                              <SortIcon col={col.id} />
                             </div>
                           </TableHead>
                         ))}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {students.map((student, idx) => (
+                      {processedStudents.length === 0 ? (
+                        <TableRow><TableCell colSpan={3 + columns.length} className="text-center py-8 text-muted-foreground">No matching students.</TableCell></TableRow>
+                      ) : processedStudents.map((student, idx) => (
                         <TableRow key={student.user_id}>
                           <TableCell className="sticky left-0 bg-card z-10 text-muted-foreground font-mono text-xs">{idx + 1}</TableCell>
                           <TableCell className="sticky left-[50px] bg-card z-10 font-medium">{student.full_name}</TableCell>
@@ -206,12 +281,10 @@ const AdminRecordBooks = () => {
           <h1 className="text-2xl font-bold text-foreground">All Record Books</h1>
           <p className="text-muted-foreground">View record books created by all teachers</p>
         </div>
-
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search by name, teacher, class..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-
         {loading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[1,2,3].map(i => <Skeleton key={i} className="h-40" />)}
