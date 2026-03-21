@@ -35,6 +35,14 @@ const AdminUsers = () => {
   const [resetPwOpen, setResetPwOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [resettingPw, setResettingPw] = useState(false);
+  
+  // Invite user state
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"student" | "teacher">("student");
+  const [inviteClassId, setInviteClassId] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [classes, setClasses] = useState<any[]>([]);
 
   const handleResetPassword = async (userId: string) => {
     if (!newPassword || newPassword.length < 6) {
@@ -64,14 +72,54 @@ const AdminUsers = () => {
     }
   };
 
+  const handleInviteUser = async () => {
+    if (!inviteEmail || !inviteRole) {
+      toast({ title: "Error", description: "Email and role are required.", variant: "destructive" });
+      return;
+    }
+    if (inviteRole === "student" && !inviteClassId) {
+      toast({ title: "Error", description: "Please select a class for the student.", variant: "destructive" });
+      return;
+    }
+    setInviting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-invite-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ 
+          email: inviteEmail, 
+          role: inviteRole,
+          class_id: inviteRole === "student" ? inviteClassId : null,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to invite user');
+      toast({ title: "Invitation Sent!", description: `An activation email has been sent to ${inviteEmail}. They can set up their account using the link.` });
+      setInviteEmail("");
+      setInviteRole("student");
+      setInviteClassId("");
+      setInviteOpen(false);
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
-    const [profilesRes, rolesRes, studentRes, teacherRes, linksRes] = await Promise.all([
+    const [profilesRes, rolesRes, studentRes, teacherRes, linksRes, classesRes] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("*"),
       supabase.from("student_profiles").select("*"),
       supabase.from("teacher_profiles").select("*"),
       supabase.from("parent_student_links").select("*"),
+      supabase.from("classes").select("*").is("deleted_at", null).order("form").order("name"),
     ]);
     const roleMap: Record<string, string> = {};
     (rolesRes.data || []).forEach((r: any) => { roleMap[r.user_id] = r.role; });
@@ -81,6 +129,7 @@ const AdminUsers = () => {
     setStudentProfiles(studentRes.data || []);
     setTeacherProfiles(teacherRes.data || []);
     setParentLinks(linksRes.data || []);
+    setClasses(classesRes.data || []);
     setLoading(false);
   };
 
