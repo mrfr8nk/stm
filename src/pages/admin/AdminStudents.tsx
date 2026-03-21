@@ -15,8 +15,9 @@ import ExportDropdown from "@/components/ExportDropdown";
 import {
   Users, Search, GraduationCap, Eye, ArrowUpDown, Mail, Phone, Save, Edit,
   UserX, UserCheck, Trash2, MapPin, Calendar, CreditCard, Heart, AlertTriangle,
-  Droplets, Shield, BookOpen, ClipboardCheck, Download
+  Droplets, Shield, BookOpen, ClipboardCheck, Download, UserPlus, Loader2, Send
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 type SortField = "full_name" | "student_id" | "form" | "class_name" | "guardian_name";
 
@@ -39,6 +40,14 @@ const AdminStudents = () => {
   const [studentGrades, setStudentGrades] = useState<any[]>([]);
   const [studentAttendance, setStudentAttendance] = useState<any[]>([]);
   const [studentFees, setStudentFees] = useState<any[]>([]);
+  
+  // Invite student state
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteClassId, setInviteClassId] = useState("");
+  const [inviteForm, setInviteForm] = useState("1");
+  const [inviteLevel, setInviteLevel] = useState("o_level");
+  const [inviting, setInviting] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -66,6 +75,53 @@ const AdminStudents = () => {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const filteredInviteClasses = classes.filter(c => c.level === inviteLevel && c.form === parseInt(inviteForm));
+
+  const handleInviteStudent = async () => {
+    if (!inviteEmail.trim()) {
+      toast({ title: "Error", description: "Please enter an email address.", variant: "destructive" });
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail.trim())) {
+      toast({ title: "Error", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+
+    setInviting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-invite-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          role: "student",
+          class_id: inviteClassId || null,
+          form: parseInt(inviteForm),
+          level: inviteLevel,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to send invitation');
+      
+      toast({ 
+        title: "Invitation Sent!", 
+        description: `An activation link has been sent to ${inviteEmail}. The link expires in 7 days.` 
+      });
+      setInviteOpen(false);
+      setInviteEmail("");
+      setInviteClassId("");
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setInviting(false);
+    }
+  };
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -196,17 +252,22 @@ const AdminStudents = () => {
             <h1 className="font-display text-2xl font-bold text-foreground">Student Management</h1>
             <p className="text-muted-foreground text-sm">Manage all student records and profiles</p>
           </div>
-          <ExportDropdown
-            title="Student Directory"
-            filename="students_list"
-            headers={["Name", "Student ID", "Class", "Form", "Level", "Guardian", "Guardian Phone", "Email", "Status"]}
-            rows={filtered.map(s => [
-              s.profile?.full_name || "", s.student_id || "", s.class?.name || "", `Form ${s.form}`,
-              s.level?.replace("_", " ").toUpperCase(), s.guardian_name || "", s.guardian_phone || "",
-              s.profile?.email || "", s.is_active === false ? "Inactive" : "Active",
-            ])}
-            disabled={filtered.length === 0}
-          />
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setInviteOpen(true)}>
+              <UserPlus className="w-4 h-4 mr-2" /> Add Student
+            </Button>
+            <ExportDropdown
+              title="Student Directory"
+              filename="students_list"
+              headers={["Name", "Student ID", "Class", "Form", "Level", "Guardian", "Guardian Phone", "Email", "Status"]}
+              rows={filtered.map(s => [
+                s.profile?.full_name || "", s.student_id || "", s.class?.name || "", `Form ${s.form}`,
+                s.level?.replace("_", " ").toUpperCase(), s.guardian_name || "", s.guardian_phone || "",
+                s.profile?.email || "", s.is_active === false ? "Inactive" : "Active",
+              ])}
+              disabled={filtered.length === 0}
+            />
+          </div>
         </div>
 
         {/* Stats */}
@@ -517,6 +578,94 @@ const AdminStudents = () => {
                 </TabsContent>
               </Tabs>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Invite Student Dialog */}
+        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-primary" /> Add New Student
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Send an activation link to a new student. They will complete their profile and set their password.
+              </p>
+
+              <div className="space-y-2">
+                <Label>Student Email *</Label>
+                <Input
+                  type="email"
+                  placeholder="student@example.com"
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Level</Label>
+                  <Select value={inviteLevel} onValueChange={v => { setInviteLevel(v); setInviteClassId(""); setInviteForm(v === "a_level" ? "5" : "1"); }}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="zjc">ZJC (Form 1-2)</SelectItem>
+                      <SelectItem value="o_level">O Level (Form 1-4)</SelectItem>
+                      <SelectItem value="a_level">A Level (Form 5-6)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Form</Label>
+                  <Select value={inviteForm} onValueChange={v => { setInviteForm(v); setInviteClassId(""); }}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(inviteLevel === "zjc" ? [1, 2] : inviteLevel === "o_level" ? [1, 2, 3, 4] : [5, 6]).map(f => (
+                        <SelectItem key={f} value={String(f)}>Form {f}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Class (Optional)</Label>
+                <Select value={inviteClassId} onValueChange={setInviteClassId}>
+                  <SelectTrigger><SelectValue placeholder="Select class..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No class assigned</SelectItem>
+                    {filteredInviteClasses.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}{c.stream ? ` (${c.stream})` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Student can select their class when activating their account.</p>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setInviteOpen(false)}>
+                  Cancel
+                </Button>
+                <Button className="flex-1" onClick={handleInviteStudent} disabled={inviting}>
+                  {inviting ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+                  ) : (
+                    <><Send className="w-4 h-4 mr-2" /> Send Invitation</>
+                  )}
+                </Button>
+              </div>
+
+              <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
+                <p className="font-medium mb-1">How it works:</p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>Student receives an email with an activation link</li>
+                  <li>They click the link and set their password</li>
+                  <li>They complete their personal and guardian details</li>
+                  <li>Link expires in 7 days</li>
+                </ul>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

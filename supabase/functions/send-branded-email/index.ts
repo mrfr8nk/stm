@@ -700,6 +700,76 @@ function feeReminderContent(data: {
   ].join('\n');
 }
 
+function accountActivationContent(data: {
+  role: string;
+  activationUrl: string;
+  expiresIn: string;
+}): string {
+  const roleLabel = data.role.charAt(0).toUpperCase() + data.role.slice(1);
+  const roleDesc: Record<string, string> = {
+    student: 'access your grades, attendance records, and school resources',
+    teacher: 'manage your classes, enter grades, and communicate with students',
+    parent: 'monitor your child\'s academic progress and stay connected',
+    admin: 'manage the school system and all user accounts',
+  };
+  return [
+    '<h2 style="color:#2c3e50;font-size:22px;',
+    'font-weight:600;margin:0 0 16px;',
+    'text-align:center;">Account Activation</h2>',
+    '<p style="color:#555;font-size:15px;',
+    'line-height:1.7;margin:0 0 24px;',
+    'text-align:center;">',
+    `You have been invited to join as a <strong>${roleLabel}</strong>.`,
+    '</p>',
+    // Role info card
+    '<div style="background:#e8f5e9;',
+    'border:1px solid #c8e6c9;',
+    'border-radius:12px;padding:20px;',
+    'margin:0 0 24px;">',
+    '<p style="color:#2e7d32;font-size:14px;',
+    'font-weight:600;margin:0 0 8px;">',
+    `&#9989; As a ${roleLabel}, you can:</p>`,
+    '<p style="color:#555;font-size:13px;',
+    `line-height:1.6;margin:0;">${roleDesc[data.role] || roleDesc.student}</p>`,
+    '</div>',
+    // CTA Button
+    '<table width="100%" cellpadding="0" cellspacing="0">',
+    '<tr><td align="center" style="padding:8px 0 24px;">',
+    `<a href="${data.activationUrl}"`,
+    ' style="display:inline-block;',
+    'background:#0a3d62;color:#fff;',
+    'text-decoration:none;padding:16px 48px;',
+    'border-radius:12px;font-size:16px;',
+    'font-weight:600;">',
+    '&#128273; Activate My Account</a>',
+    '</td></tr></table>',
+    // Warning
+    '<div style="background:#fff8e1;',
+    'border:1px solid #ffe082;',
+    'border-radius:12px;padding:16px;',
+    'margin-bottom:24px;">',
+    '<p style="color:#666;font-size:13px;',
+    'line-height:1.6;margin:0;">',
+    '<strong style="color:#f57f17;">',
+    '&#9201; Important:</strong><br/>',
+    `&#8226; Link expires in <strong>${data.expiresIn}</strong><br/>`,
+    '&#8226; You\'ll need to set your password<br/>',
+    '&#8226; Have your personal details ready',
+    '</p></div>',
+    // Fallback link
+    '<div style="background:#f0f4f8;',
+    'border-radius:8px;padding:16px;',
+    'text-align:center;">',
+    '<p style="color:#888;font-size:12px;',
+    'margin:0 0 8px;">',
+    'Can\'t click? Copy this link:</p>',
+    '<p style="color:#0a3d62;font-size:11px;',
+    'word-break:break-all;margin:0;',
+    `font-family:monospace;">${data.activationUrl}</p>`,
+    '</div>',
+  ].join('\n');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -862,6 +932,17 @@ serve(async (req) => {
       const portalUrl = supabaseUrl.replace('.supabase.co', '.lovable.app') + '/login';
       subject = `Fee Balance Reminder - ${SCHOOL}`;
       html = wrap(feeReminderContent({ ...reminder_data, portalUrl }));
+
+    } else if (type === 'account_activation') {
+      const { activation_data } = body;
+      if (!activation_data) {
+        return new Response(
+          JSON.stringify({ error: 'Activation data is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      subject = `Activate Your Account - ${SCHOOL}`;
+      html = wrap(accountActivationContent(activation_data));
 
     } else {
       return new Response(
