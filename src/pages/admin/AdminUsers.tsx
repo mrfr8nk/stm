@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Search, GraduationCap, BookOpen, Shield, Trash2, Eye, ArrowUpDown, Mail, Phone, Save, Edit, UserX, UserCheck, Link2, Unlink, UserPlus, CheckSquare, Square, Ban, ShieldOff, KeyRound } from "lucide-react";
+import { Users, Search, GraduationCap, BookOpen, Shield, Trash2, Eye, ArrowUpDown, Mail, Phone, Save, Edit, UserX, UserCheck, Link2, Unlink, UserPlus, CheckSquare, Square, Ban, ShieldOff, KeyRound, Loader2, Send } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import ExportDropdown from "@/components/ExportDropdown";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -35,6 +36,16 @@ const AdminUsers = () => {
   const [resetPwOpen, setResetPwOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [resettingPw, setResettingPw] = useState(false);
+  
+  // Invite user state
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"student" | "teacher" | "parent" | "admin">("student");
+  const [inviteClassId, setInviteClassId] = useState("");
+  const [inviteForm, setInviteForm] = useState("1");
+  const [inviteLevel, setInviteLevel] = useState("o_level");
+  const [inviting, setInviting] = useState(false);
+  const [classes, setClasses] = useState<any[]>([]);
 
   const handleResetPassword = async (userId: string) => {
     if (!newPassword || newPassword.length < 6) {
@@ -85,6 +96,60 @@ const AdminUsers = () => {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  // Fetch classes for invite form
+  useEffect(() => {
+    supabase.from("classes").select("*").is("deleted_at", null).order("form").order("name")
+      .then(({ data }) => setClasses(data || []));
+  }, []);
+
+  const filteredInviteClasses = classes.filter(c => c.level === inviteLevel && c.form === parseInt(inviteForm));
+
+  const handleInviteUser = async () => {
+    if (!inviteEmail.trim()) {
+      toast({ title: "Error", description: "Please enter an email address.", variant: "destructive" });
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail.trim())) {
+      toast({ title: "Error", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+
+    setInviting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-invite-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          role: inviteRole,
+          class_id: inviteRole === "student" ? inviteClassId || null : null,
+          form: inviteRole === "student" ? parseInt(inviteForm) : null,
+          level: inviteRole === "student" ? inviteLevel : null,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to send invitation');
+      
+      toast({ 
+        title: "Invitation Sent!", 
+        description: `An activation link has been sent to ${inviteEmail}. The link expires in 7 days.` 
+      });
+      setInviteOpen(false);
+      setInviteEmail("");
+      setInviteRole("student");
+      setInviteClassId("");
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setInviting(false);
+    }
+  };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
     if (!confirm(`Are you sure you want to PERMANENTLY delete ${userName}? This cannot be undone.`)) return;
@@ -513,13 +578,18 @@ const AdminUsers = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div><h1 className="font-display text-2xl font-bold text-foreground">User Management</h1><p className="text-muted-foreground text-sm">Manage all system users</p></div>
-          <ExportDropdown
-            title="User Directory"
-            filename="users_list"
-            headers={["Name", "Email", "Phone", "Role", "Joined"]}
-            rows={allFiltered.map(u => [u.full_name, u.email, u.phone || "", u.role, new Date(u.created_at).toLocaleDateString()])}
-            disabled={users.length === 0}
-          />
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setInviteOpen(true)}>
+              <UserPlus className="w-4 h-4 mr-2" /> Invite User
+            </Button>
+            <ExportDropdown
+              title="User Directory"
+              filename="users_list"
+              headers={["Name", "Email", "Phone", "Role", "Joined"]}
+              rows={allFiltered.map(u => [u.full_name, u.email, u.phone || "", u.role, new Date(u.created_at).toLocaleDateString()])}
+              disabled={users.length === 0}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -735,6 +805,120 @@ const AdminUsers = () => {
                 )}
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Invite User Dialog */}
+        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-primary" /> Invite New User
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Send an activation link to a new user. They will complete their profile and set their password.
+              </p>
+
+              <div className="space-y-2">
+                <Label>Email Address *</Label>
+                <Input
+                  type="email"
+                  placeholder="user@example.com"
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Role *</Label>
+                <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="student">
+                      <span className="flex items-center gap-2"><GraduationCap className="w-4 h-4" /> Student</span>
+                    </SelectItem>
+                    <SelectItem value="teacher">
+                      <span className="flex items-center gap-2"><BookOpen className="w-4 h-4" /> Teacher</span>
+                    </SelectItem>
+                    <SelectItem value="parent">
+                      <span className="flex items-center gap-2"><Users className="w-4 h-4" /> Parent</span>
+                    </SelectItem>
+                    <SelectItem value="admin">
+                      <span className="flex items-center gap-2"><Shield className="w-4 h-4" /> Administrator</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {inviteRole === "student" && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Level</Label>
+                      <Select value={inviteLevel} onValueChange={v => { setInviteLevel(v); setInviteClassId(""); setInviteForm(v === "a_level" ? "5" : "1"); }}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="zjc">ZJC (Form 1-2)</SelectItem>
+                          <SelectItem value="o_level">O Level (Form 1-4)</SelectItem>
+                          <SelectItem value="a_level">A Level (Form 5-6)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Form</Label>
+                      <Select value={inviteForm} onValueChange={v => { setInviteForm(v); setInviteClassId(""); }}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(inviteLevel === "zjc" ? [1, 2] : inviteLevel === "o_level" ? [1, 2, 3, 4] : [5, 6]).map(f => (
+                            <SelectItem key={f} value={String(f)}>Form {f}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Class (Optional)</Label>
+                    <Select value={inviteClassId} onValueChange={setInviteClassId}>
+                      <SelectTrigger><SelectValue placeholder="Select class..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No class assigned</SelectItem>
+                        {filteredInviteClasses.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}{c.stream ? ` (${c.stream})` : ""}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Student can select their class when activating their account.</p>
+                  </div>
+                </>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setInviteOpen(false)}>
+                  Cancel
+                </Button>
+                <Button className="flex-1" onClick={handleInviteUser} disabled={inviting}>
+                  {inviting ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+                  ) : (
+                    <><Send className="w-4 h-4 mr-2" /> Send Invitation</>
+                  )}
+                </Button>
+              </div>
+
+              <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
+                <p className="font-medium mb-1">How it works:</p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>User receives an email with an activation link</li>
+                  <li>They click the link and set their password</li>
+                  <li>They complete their profile information</li>
+                  <li>Link expires in 7 days</li>
+                </ul>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
