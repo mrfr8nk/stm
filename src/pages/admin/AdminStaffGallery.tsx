@@ -2,13 +2,14 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Plus, Trash2, Edit, Upload, User, Eye, EyeOff } from "lucide-react";
+import { Users, Plus, Trash2, Edit, Upload, User, Eye, EyeOff, Crown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ExportDropdown from "@/components/ExportDropdown";
+import defaultHeadmasterImg from "@/assets/headmaster.jpg";
 
 const CATEGORIES = [
   { value: "admin", label: "Administration" },
@@ -24,6 +25,15 @@ const AdminStaffGallery = () => {
   const [editItem, setEditItem] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const headmasterFileRef = useRef<HTMLInputElement>(null);
+
+  // Headmaster settings
+  const [headmasterImage, setHeadmasterImage] = useState<string>("");
+  const [headmasterName, setHeadmasterName] = useState<string>("Mr. Nyabako");
+  const [headmasterTitle, setHeadmasterTitle] = useState<string>("Head Master");
+  const [headmasterQuote, setHeadmasterQuote] = useState<string>("");
+  const [uploadingHeadmaster, setUploadingHeadmaster] = useState(false);
+  const [savingHeadmaster, setSavingHeadmaster] = useState(false);
 
   const [form, setForm] = useState({
     name: "", position: "", department: "", subject: "",
@@ -40,7 +50,20 @@ const AdminStaffGallery = () => {
     setStaff(data || []);
   };
 
-  useEffect(() => { fetchStaff(); }, []);
+  const fetchHeadmasterSettings = async () => {
+    const keys = ["headmaster_image", "headmaster_name", "headmaster_title", "headmaster_quote"];
+    const { data } = await supabase.from("system_settings").select("*").in("key", keys);
+    if (data) {
+      data.forEach((item: any) => {
+        if (item.key === "headmaster_image" && item.value) setHeadmasterImage(item.value);
+        if (item.key === "headmaster_name" && item.value) setHeadmasterName(item.value);
+        if (item.key === "headmaster_title" && item.value) setHeadmasterTitle(item.value);
+        if (item.key === "headmaster_quote" && item.value) setHeadmasterQuote(item.value);
+      });
+    }
+  };
+
+  useEffect(() => { fetchStaff(); fetchHeadmasterSettings(); }, []);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -57,6 +80,45 @@ const AdminStaffGallery = () => {
     const { data: urlData } = supabase.storage.from("staff-photos").getPublicUrl(path);
     setForm(f => ({ ...f, image_url: urlData.publicUrl }));
     setUploading(false);
+  };
+
+  const handleHeadmasterImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingHeadmaster(true);
+    const ext = file.name.split(".").pop();
+    const path = `headmaster-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("staff-photos").upload(path, file);
+    if (error) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+      setUploadingHeadmaster(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("staff-photos").getPublicUrl(path);
+    setHeadmasterImage(urlData.publicUrl);
+    setUploadingHeadmaster(false);
+  };
+
+  const handleSaveHeadmasterSettings = async () => {
+    setSavingHeadmaster(true);
+    const settings = [
+      { key: "headmaster_image", value: headmasterImage },
+      { key: "headmaster_name", value: headmasterName },
+      { key: "headmaster_title", value: headmasterTitle },
+      { key: "headmaster_quote", value: headmasterQuote },
+    ];
+    
+    for (const setting of settings) {
+      await supabase.from("system_settings").upsert({
+        key: setting.key,
+        value: setting.value,
+        updated_at: new Date().toISOString(),
+        updated_by: user?.id,
+      }, { onConflict: "key" });
+    }
+    
+    toast({ title: "Headmaster settings saved" });
+    setSavingHeadmaster(false);
   };
 
   const handleSave = async () => {
@@ -145,6 +207,80 @@ const AdminStaffGallery = () => {
             </Button>
           </div>
         </div>
+
+        {/* Headmaster Settings Card */}
+        <Card className="border-l-4 border-l-secondary">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Crown className="w-5 h-5 text-secondary" /> Headmaster Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Update the headmaster image and details displayed on the homepage.
+            </p>
+            <div className="grid md:grid-cols-[200px_1fr] gap-6">
+              <div className="space-y-3">
+                <div className="relative">
+                  <img 
+                    src={headmasterImage || defaultHeadmasterImg} 
+                    alt="Headmaster" 
+                    className="w-full aspect-square rounded-xl object-cover border border-border shadow-sm"
+                  />
+                </div>
+                <input 
+                  ref={headmasterFileRef} 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleHeadmasterImageUpload} 
+                  className="hidden" 
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => headmasterFileRef.current?.click()} 
+                  disabled={uploadingHeadmaster}
+                >
+                  <Upload className="w-4 h-4 mr-1" /> 
+                  {uploadingHeadmaster ? "Uploading..." : "Change Photo"}
+                </Button>
+              </div>
+              <div className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Name</label>
+                    <Input 
+                      placeholder="Headmaster name" 
+                      value={headmasterName} 
+                      onChange={e => setHeadmasterName(e.target.value)} 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Title</label>
+                    <Input 
+                      placeholder="e.g. Head Master" 
+                      value={headmasterTitle} 
+                      onChange={e => setHeadmasterTitle(e.target.value)} 
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">Quote / Message (optional)</label>
+                  <textarea
+                    className="w-full border border-input rounded-lg px-3 py-2 bg-background text-foreground text-sm min-h-[100px] resize-y"
+                    placeholder="A welcoming message or inspirational quote from the headmaster..."
+                    value={headmasterQuote}
+                    onChange={e => setHeadmasterQuote(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleSaveHeadmasterSettings} disabled={savingHeadmaster}>
+                  {savingHeadmaster ? "Saving..." : "Save Headmaster Settings"}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {staff.length === 0 && (
           <Card>
