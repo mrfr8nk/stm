@@ -21,15 +21,16 @@ const requirements = [
 ];
 
 const feeStructure = [
-  { level: "Form 1 - 4 (O-Level)", tuition: "$250", levy: "$50", total: "$300" },
-  { level: "Form 5 - 6 (A-Level)", tuition: "$300", levy: "$60", total: "$360" },
+  { level: "Form 1 - 4 (O-Level)", tuition: "$70", levy: "$50", total: "$140" },
+  { level: "Form 5 - 6 (A-Level)", tuition: "$90", levy: "$50", total: "$120" },
 ];
 
 const passRates = [
-  { year: "2024", oLevel: "89%", aLevel: "92%" },
-  { year: "2023", oLevel: "87%", aLevel: "90%" },
-  { year: "2022", oLevel: "85%", aLevel: "88%" },
-  { year: "2021", oLevel: "83%", aLevel: "91%" },
+  { year: "2025", oLevel: "72%", aLevel: "96%" },
+  { year: "2024", oLevel: "85%", aLevel: "95%" },
+  { year: "2023", oLevel: "71%", aLevel: "95%" },
+  { year: "2022", oLevel: "68%", aLevel: "98%" },
+  { year: "2021", oLevel: "69%", aLevel: "94%" },
 ];
 
 const timeline = [
