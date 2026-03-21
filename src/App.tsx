@@ -20,6 +20,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Activate from "./pages/Activate";
 
 // Teacher pages
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
@@ -107,6 +108,7 @@ const App = () => (
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/activate" element={<Activate />} />
               <Route path="/verify-report" element={<VerifyReport />} />
               <Route path="/credits" element={<Credits />} />
 

@@ -15,7 +15,7 @@ import ExportDropdown from "@/components/ExportDropdown";
 import {
   Users, Search, GraduationCap, Eye, ArrowUpDown, Mail, Phone, Save, Edit,
   UserX, UserCheck, Trash2, MapPin, Calendar, CreditCard, Heart, AlertTriangle,
-  Droplets, Shield, BookOpen, ClipboardCheck, Download
+  Droplets, Shield, BookOpen, ClipboardCheck, Download, UserPlus
 } from "lucide-react";
 
 type SortField = "full_name" | "student_id" | "form" | "class_name" | "guardian_name";
@@ -39,6 +39,13 @@ const AdminStudents = () => {
   const [studentGrades, setStudentGrades] = useState<any[]>([]);
   const [studentAttendance, setStudentAttendance] = useState<any[]>([]);
   const [studentFees, setStudentFees] = useState<any[]>([]);
+
+  // Invite student state
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteClass, setInviteClass] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -65,7 +72,72 @@ const AdminStudents = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  const fetchPendingInvitations = async () => {
+    const { data } = await supabase
+      .from("pending_invitations")
+      .select("*")
+      .eq("status", "pending")
+      .eq("role", "student")
+      .order("created_at", { ascending: false });
+    setPendingInvitations(data || []);
+  };
+
+  const handleInviteStudent = async () => {
+    if (!inviteEmail.trim()) {
+      toast({ title: "Required", description: "Please enter an email address.", variant: "destructive" });
+      return;
+    }
+    if (!inviteEmail.includes("@")) {
+      toast({ title: "Invalid Email", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+    setInviting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ 
+          email: inviteEmail.trim(), 
+          role: "student",
+          class_name: inviteClass || null,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to send invitation');
+      toast({ title: "Invitation Sent!", description: `An activation link has been sent to ${inviteEmail}.` });
+      setInviteEmail("");
+      setInviteClass("");
+      setInviteOpen(false);
+      fetchPendingInvitations();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleCancelInvitation = async (id: string) => {
+    if (!confirm("Cancel this invitation?")) return;
+    const { error } = await supabase
+      .from("pending_invitations")
+      .update({ status: "cancelled" })
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Invitation Cancelled" });
+      fetchPendingInvitations();
+    }
+  };
+
+  useEffect(() => { 
+    fetchData(); 
+    fetchPendingInvitations();
+  }, []);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -196,7 +268,11 @@ const AdminStudents = () => {
             <h1 className="font-display text-2xl font-bold text-foreground">Student Management</h1>
             <p className="text-muted-foreground text-sm">Manage all student records and profiles</p>
           </div>
-          <ExportDropdown
+          <div className="flex gap-2">
+            <Button onClick={() => setInviteOpen(true)}>
+              <UserPlus className="w-4 h-4 mr-1" /> Invite Student
+            </Button>
+            <ExportDropdown
             title="Student Directory"
             filename="students_list"
             headers={["Name", "Student ID", "Class", "Form", "Level", "Guardian", "Guardian Phone", "Email", "Status"]}

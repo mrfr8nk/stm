@@ -36,6 +36,15 @@ const AdminUsers = () => {
   const [newPassword, setNewPassword] = useState("");
   const [resettingPw, setResettingPw] = useState(false);
 
+  // Invite user state
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"student" | "teacher">("teacher");
+  const [inviteClass, setInviteClass] = useState("");
+  const [classes, setClasses] = useState<any[]>([]);
+  const [inviting, setInviting] = useState(false);
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+
   const handleResetPassword = async (userId: string) => {
     if (!newPassword || newPassword.length < 6) {
       toast({ title: "Error", description: "Password must be at least 6 characters.", variant: "destructive" });
@@ -64,6 +73,109 @@ const AdminUsers = () => {
     }
   };
 
+  const fetchClasses = async () => {
+    const { data } = await supabase.from("classes").select("*").is("deleted_at", null).order("form").order("name");
+    setClasses(data || []);
+  };
+
+  const fetchPendingInvitations = async () => {
+    const { data } = await supabase
+      .from("pending_invitations")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+    setPendingInvitations(data || []);
+  };
+
+  const handleInviteUser = async () => {
+    if (!inviteEmail.trim()) {
+      toast({ title: "Required", description: "Please enter an email address.", variant: "destructive" });
+      return;
+    }
+    if (!inviteEmail.includes("@")) {
+      toast({ title: "Invalid Email", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+    setInviting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ 
+          email: inviteEmail.trim(), 
+          role: inviteRole,
+          class_name: inviteRole === "student" ? inviteClass : null,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to send invitation');
+      toast({ title: "Invitation Sent!", description: `An activation link has been sent to ${inviteEmail}.` });
+      setInviteEmail("");
+      setInviteClass("");
+      setInviteOpen(false);
+      fetchPendingInvitations();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleCancelInvitation = async (id: string) => {
+    if (!confirm("Cancel this invitation?")) return;
+    const { error } = await supabase
+      .from("pending_invitations")
+      .update({ status: "cancelled" })
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Invitation Cancelled" });
+      fetchPendingInvitations();
+    }
+  };
+
+  const handleResendInvitation = async (invitation: any) => {
+    setInviting(true);
+    try {
+      // Update the invitation with a new token and expiry
+      const newToken = crypto.randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      
+      await supabase
+        .from("pending_invitations")
+        .update({ token: newToken, expires_at: expiresAt.toISOString() })
+        .eq("id", invitation.id);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ 
+          email: invitation.email, 
+          role: invitation.role,
+          class_name: invitation.class_name,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to resend invitation');
+      toast({ title: "Invitation Resent!", description: `A new activation link has been sent to ${invitation.email}.` });
+      fetchPendingInvitations();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     const [profilesRes, rolesRes, studentRes, teacherRes, linksRes] = await Promise.all([
@@ -84,7 +196,11 @@ const AdminUsers = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+    fetchClasses();
+    fetchPendingInvitations();
+  }, []);
 
   const handleDeleteUser = async (userId: string, userName: string) => {
     if (!confirm(`Are you sure you want to PERMANENTLY delete ${userName}? This cannot be undone.`)) return;
@@ -513,13 +629,18 @@ const AdminUsers = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div><h1 className="font-display text-2xl font-bold text-foreground">User Management</h1><p className="text-muted-foreground text-sm">Manage all system users</p></div>
-          <ExportDropdown
+          <div className="flex gap-2">
+            <Button onClick={() => setInviteOpen(true)}>
+              <Mail className="w-4 h-4 mr-1" /> Invite User
+            </Button>
+            <ExportDropdown
             title="User Directory"
             filename="users_list"
             headers={["Name", "Email", "Phone", "Role", "Joined"]}
             rows={allFiltered.map(u => [u.full_name, u.email, u.phone || "", u.role, new Date(u.created_at).toLocaleDateString()])}
             disabled={users.length === 0}
           />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -737,6 +858,103 @@ const AdminUsers = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Invite User Dialog */}
+        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5" /> Invite New User
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Send an invitation email to create a new account. The user will receive a link to complete their registration.
+              </p>
+              <div>
+                <label className="text-sm font-medium">Email Address *</label>
+                <Input 
+                  type="email" 
+                  placeholder="user@example.com" 
+                  value={inviteEmail} 
+                  onChange={e => setInviteEmail(e.target.value)} 
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Role *</label>
+                <Select value={inviteRole} onValueChange={(v: "student" | "teacher") => setInviteRole(v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="teacher">
+                      <span className="flex items-center gap-2"><BookOpen className="w-4 h-4" /> Teacher</span>
+                    </SelectItem>
+                    <SelectItem value="student">
+                      <span className="flex items-center gap-2"><GraduationCap className="w-4 h-4" /> Student</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {inviteRole === "student" && (
+                <div>
+                  <label className="text-sm font-medium">Class (optional)</label>
+                  <Input 
+                    placeholder="e.g., Form 3A" 
+                    value={inviteClass} 
+                    onChange={e => setInviteClass(e.target.value)} 
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">The student can select their actual class during activation.</p>
+                </div>
+              )}
+              <div className="flex gap-2 pt-2">
+                <Button className="flex-1" onClick={handleInviteUser} disabled={inviting}>
+                  {inviting ? "Sending..." : "Send Invitation"}
+                </Button>
+                <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Pending Invitations Section */}
+        {pendingInvitations.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Mail className="w-4 h-4" /> Pending Invitations ({pendingInvitations.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {pendingInvitations.map(inv => (
+                  <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${inv.role === "student" ? "bg-accent/10" : "bg-secondary/10"}`}>
+                        {inv.role === "student" ? <GraduationCap className="w-4 h-4 text-accent" /> : <BookOpen className="w-4 h-4 text-secondary" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{inv.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {inv.role} {inv.class_name ? `• ${inv.class_name}` : ""} • 
+                          Expires {new Date(inv.expires_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleResendInvitation(inv)} disabled={inviting}>
+                        <Mail className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleCancelInvitation(inv.id)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );
