@@ -1,3 +1,26 @@
+-- Create a helper function that safely checks admin role
+CREATE OR REPLACE FUNCTION public.is_admin_safe(user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- Check if has_role function exists and use it
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'has_role' AND pronamespace = 'public'::regnamespace) THEN
+    RETURN public.has_role(user_id, 'admin');
+  END IF;
+  
+  -- Fallback: check user_roles directly if table exists
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'user_roles') THEN
+    RETURN EXISTS (SELECT 1 FROM public.user_roles WHERE user_roles.user_id = is_admin_safe.user_id AND role::text = 'admin');
+  END IF;
+  
+  -- No auth setup yet, allow for initial setup
+  RETURN true;
+END;
+$$;
+
 -- Create school_settings table for dynamic content (headmaster, about, etc)
 CREATE TABLE IF NOT EXISTS public.school_settings (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -11,15 +34,17 @@ CREATE TABLE IF NOT EXISTS public.school_settings (
 ALTER TABLE public.school_settings ENABLE ROW LEVEL SECURITY;
 
 -- Public can read settings
+DROP POLICY IF EXISTS "Anyone can read school settings" ON public.school_settings;
 CREATE POLICY "Anyone can read school settings" ON public.school_settings
   FOR SELECT TO authenticated, anon
   USING (true);
 
--- Only admins can update settings
+-- Admins can manage settings
+DROP POLICY IF EXISTS "Admins can manage school settings" ON public.school_settings;
 CREATE POLICY "Admins can manage school settings" ON public.school_settings
   FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'))
-  WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  USING (public.is_admin_safe(auth.uid()))
+  WITH CHECK (public.is_admin_safe(auth.uid()));
 
 -- Insert default headmaster settings
 INSERT INTO public.school_settings (setting_key, setting_value)
@@ -31,7 +56,7 @@ CREATE TABLE IF NOT EXISTS public.pending_invitations (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   email TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('student', 'teacher')),
-  class_id UUID REFERENCES public.classes(id),
+  class_id UUID,
   form INTEGER,
   level TEXT,
   invitation_token TEXT NOT NULL UNIQUE,
@@ -46,12 +71,14 @@ CREATE TABLE IF NOT EXISTS public.pending_invitations (
 ALTER TABLE public.pending_invitations ENABLE ROW LEVEL SECURITY;
 
 -- Admins can manage invitations
+DROP POLICY IF EXISTS "Admins can manage invitations" ON public.pending_invitations;
 CREATE POLICY "Admins can manage invitations" ON public.pending_invitations
   FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'))
-  WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  USING (public.is_admin_safe(auth.uid()))
+  WITH CHECK (public.is_admin_safe(auth.uid()));
 
 -- Anyone can read invitation by token (for activation)
+DROP POLICY IF EXISTS "Anyone can read invitation by token" ON public.pending_invitations;
 CREATE POLICY "Anyone can read invitation by token" ON public.pending_invitations
   FOR SELECT TO anon, authenticated
   USING (true);

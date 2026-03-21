@@ -2,11 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Plus, Trash2, Edit, Upload, User, Eye, EyeOff } from "lucide-react";
+import { Users, Plus, Trash2, Edit, Upload, User, Eye, EyeOff, Crown, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ExportDropdown from "@/components/ExportDropdown";
 
@@ -24,6 +24,21 @@ const AdminStaffGallery = () => {
   const [editItem, setEditItem] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const headmasterFileRef = useRef<HTMLInputElement>(null);
+
+  // Headmaster state
+  const [headmaster, setHeadmaster] = useState<any>({
+    name: "Mr. Nyabako",
+    title: "Head Master",
+    image_url: null,
+    quote: "",
+    message: "",
+    closing: "",
+  });
+  const [editingHeadmaster, setEditingHeadmaster] = useState(false);
+  const [headmasterForm, setHeadmasterForm] = useState<any>({});
+  const [savingHeadmaster, setSavingHeadmaster] = useState(false);
+  const [uploadingHeadmaster, setUploadingHeadmaster] = useState(false);
 
   const [form, setForm] = useState({
     name: "", position: "", department: "", subject: "",
@@ -40,7 +55,22 @@ const AdminStaffGallery = () => {
     setStaff(data || []);
   };
 
-  useEffect(() => { fetchStaff(); }, []);
+  const fetchHeadmaster = async () => {
+    const { data } = await supabase
+      .from("school_settings")
+      .select("*")
+      .eq("setting_key", "headmaster")
+      .single();
+    if (data?.setting_value) {
+      setHeadmaster(data.setting_value);
+      setHeadmasterForm(data.setting_value);
+    }
+  };
+
+  useEffect(() => { 
+    fetchStaff(); 
+    fetchHeadmaster();
+  }, []);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -57,6 +87,44 @@ const AdminStaffGallery = () => {
     const { data: urlData } = supabase.storage.from("staff-photos").getPublicUrl(path);
     setForm(f => ({ ...f, image_url: urlData.publicUrl }));
     setUploading(false);
+  };
+
+  const handleHeadmasterImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingHeadmaster(true);
+    const ext = file.name.split(".").pop();
+    const path = `headmaster_${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("staff-photos").upload(path, file);
+    if (error) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+      setUploadingHeadmaster(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("staff-photos").getPublicUrl(path);
+    setHeadmasterForm((f: any) => ({ ...f, image_url: urlData.publicUrl }));
+    setUploadingHeadmaster(false);
+  };
+
+  const handleSaveHeadmaster = async () => {
+    setSavingHeadmaster(true);
+    const { error } = await supabase
+      .from("school_settings")
+      .upsert({
+        setting_key: "headmaster",
+        setting_value: headmasterForm,
+        updated_at: new Date().toISOString(),
+        updated_by: user?.id,
+      }, { onConflict: "setting_key" });
+    
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Headmaster information updated" });
+      setHeadmaster(headmasterForm);
+      setEditingHeadmaster(false);
+    }
+    setSavingHeadmaster(false);
   };
 
   const handleSave = async () => {
@@ -145,6 +213,177 @@ const AdminStaffGallery = () => {
             </Button>
           </div>
         </div>
+
+        {/* Headmaster Section */}
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Crown className="w-5 h-5 text-primary" /> Headmaster Profile
+              </CardTitle>
+              <Button 
+                variant={editingHeadmaster ? "default" : "outline"} 
+                size="sm"
+                onClick={() => {
+                  if (editingHeadmaster) {
+                    handleSaveHeadmaster();
+                  } else {
+                    setHeadmasterForm(headmaster);
+                    setEditingHeadmaster(true);
+                  }
+                }}
+                disabled={savingHeadmaster}
+              >
+                {editingHeadmaster ? (
+                  <><Save className="w-4 h-4 mr-1" /> {savingHeadmaster ? "Saving..." : "Save Changes"}</>
+                ) : (
+                  <><Edit className="w-4 h-4 mr-1" /> Edit</>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-6 items-start">
+              <div className="flex-shrink-0">
+                {editingHeadmaster ? (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      {headmasterForm.image_url ? (
+                        <img 
+                          src={headmasterForm.image_url} 
+                          alt="Headmaster" 
+                          className="w-32 h-32 rounded-xl object-cover border-2 border-primary/20"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 rounded-xl bg-muted flex items-center justify-center border-2 border-dashed border-primary/20">
+                          <User className="w-12 h-12 text-muted-foreground/30" />
+                        </div>
+                      )}
+                    </div>
+                    <input 
+                      ref={headmasterFileRef} 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleHeadmasterImageUpload} 
+                      className="hidden" 
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => headmasterFileRef.current?.click()} 
+                      disabled={uploadingHeadmaster}
+                    >
+                      <Upload className="w-4 h-4 mr-1" /> 
+                      {uploadingHeadmaster ? "Uploading..." : "Change Photo"}
+                    </Button>
+                    {headmasterForm.image_url && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full text-destructive"
+                        onClick={() => setHeadmasterForm((f: any) => ({ ...f, image_url: null }))}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" /> Remove Photo
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    {headmaster.image_url ? (
+                      <img 
+                        src={headmaster.image_url} 
+                        alt="Headmaster" 
+                        className="w-32 h-32 rounded-xl object-cover border-2 border-primary/20"
+                      />
+                    ) : (
+                      <div className="w-32 h-32 rounded-xl bg-muted flex items-center justify-center">
+                        <User className="w-12 h-12 text-muted-foreground/30" />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 space-y-3">
+                {editingHeadmaster ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Name</label>
+                        <Input 
+                          value={headmasterForm.name || ""} 
+                          onChange={e => setHeadmasterForm((f: any) => ({ ...f, name: e.target.value }))}
+                          placeholder="Headmaster name"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Title</label>
+                        <Input 
+                          value={headmasterForm.title || ""} 
+                          onChange={e => setHeadmasterForm((f: any) => ({ ...f, title: e.target.value }))}
+                          placeholder="e.g., Head Master"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Quote</label>
+                      <textarea 
+                        className="w-full border border-input rounded-lg px-3 py-2 bg-background text-foreground text-sm min-h-[60px] resize-y"
+                        value={headmasterForm.quote || ""}
+                        onChange={e => setHeadmasterForm((f: any) => ({ ...f, quote: e.target.value }))}
+                        placeholder="Opening quote..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Message</label>
+                      <textarea 
+                        className="w-full border border-input rounded-lg px-3 py-2 bg-background text-foreground text-sm min-h-[80px] resize-y"
+                        value={headmasterForm.message || ""}
+                        onChange={e => setHeadmasterForm((f: any) => ({ ...f, message: e.target.value }))}
+                        placeholder="Main message..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Closing</label>
+                      <textarea 
+                        className="w-full border border-input rounded-lg px-3 py-2 bg-background text-foreground text-sm min-h-[60px] resize-y"
+                        value={headmasterForm.closing || ""}
+                        onChange={e => setHeadmasterForm((f: any) => ({ ...f, closing: e.target.value }))}
+                        placeholder="Closing statement..."
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button variant="ghost" size="sm" onClick={() => setEditingHeadmaster(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <h3 className="font-display text-xl font-bold text-foreground">{headmaster.name || "Not set"}</h3>
+                      <p className="text-sm text-muted-foreground">{headmaster.title || "Head Master"}</p>
+                    </div>
+                    {headmaster.quote && (
+                      <blockquote className="text-sm text-muted-foreground italic border-l-2 border-primary/30 pl-3">
+                        "{headmaster.quote}"
+                      </blockquote>
+                    )}
+                    {headmaster.message && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">{headmaster.message}</p>
+                    )}
+                    {!headmaster.image_url && (
+                      <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded inline-block">
+                        No photo uploaded - click Edit to add one
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {staff.length === 0 && (
           <Card>
