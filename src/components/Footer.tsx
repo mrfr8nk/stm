@@ -57,8 +57,8 @@ const Footer = () => {
               {[
                 { icon: MapPin, text: "Harare, Chitungwiza Zengeza 1" },
                 { icon: Phone, text: "+263 719 647 303" },
-                { icon: Mail, text: "info@stmaryshs.edu" },
-                { icon: Clock, text: "Mon-Fri: 8:00 AM - 4:30 PM" },
+                { icon: Mail, text: "stmaryssecondary62@gmail.com" },
+                { icon: Clock, text: "Mon-Fri: 8:00 AM - 4:00 PM" },
               ].map(({ icon: Icon, text }, i) => (
                 <p key={i} className="flex items-start gap-2 text-white/70">
                   <Icon className="w-4 h-4 mt-1 text-[hsl(197,71%,73%)] flex-shrink-0" />
