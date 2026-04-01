@@ -66,16 +66,18 @@ const StudentDashboard = () => {
       setRecentGrades(grades.slice(0, 6));
       setAnnouncements(annRes.data || []);
 
-      // Fee balance
+      // Fee balance - bypass for full scholarship students
       let totalBal = 0;
       const owingTerms: string[] = [];
-      fees.forEach(f => {
-        const bal = Number(f.amount_due) - Number(f.amount_paid);
-        if (bal > 0) {
-          totalBal += bal;
-          owingTerms.push(`${f.term.replace("_", " ").toUpperCase()} ${f.academic_year}`);
-        }
-      });
+      if (!hasFullScholarship) {
+        fees.forEach(f => {
+          const bal = Number(f.amount_due) - Number(f.amount_paid);
+          if (bal > 0) {
+            totalBal += bal;
+            owingTerms.push(`${f.term.replace("_", " ").toUpperCase()} ${f.academic_year}`);
+          }
+        });
+      }
       setFeeBalance(totalBal);
       setUnpaidTerms([...new Set(owingTerms)]);
     };
