@@ -46,6 +46,12 @@ const Admissions = () => {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [birthCertUrl, setBirthCertUrl] = useState("");
+  const [resultSlipUrl, setResultSlipUrl] = useState("");
+  const [uploadingBirth, setUploadingBirth] = useState(false);
+  const [uploadingResult, setUploadingResult] = useState(false);
+  const birthRef = useRef<HTMLInputElement>(null);
+  const resultRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     full_name: "",
     email: "",
@@ -62,6 +68,23 @@ const Admissions = () => {
     notes: "",
     national_id: "",
   });
+
+  const handleDocUpload = async (file: File, type: "birth" | "result") => {
+    const setUploading = type === "birth" ? setUploadingBirth : setUploadingResult;
+    const setUrl = type === "birth" ? setBirthCertUrl : setResultSlipUrl;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${type}_${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("application-documents").upload(path, file);
+    if (error) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("application-documents").getPublicUrl(path);
+    setUrl(urlData.publicUrl);
+    setUploading(false);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -92,7 +115,9 @@ const Admissions = () => {
       previous_school: form.previous_school || null,
       address: form.address || null,
       notes: form.notes || null,
-    });
+      birth_cert_image_url: birthCertUrl || null,
+      result_slip_image_url: resultSlipUrl || null,
+    } as any);
     setSubmitting(false);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
