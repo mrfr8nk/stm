@@ -831,7 +831,7 @@ serve(async (req) => {
       }
       const portalUrl = supabaseUrl.replace('.supabase.co', '.lovable.app') + '/login';
       subject = `Welcome to ${SCHOOL}! 🎓`;
-      html = wrap(welcomeContent({ ...welcome_data, portalUrl }));
+      html = wrap(welcomeContent({ ...welcome_data, portalUrl, activationLink: welcome_data.activationLink }));
 
     } else if (type === 'attendance_alert') {
       const { attendance_data } = body;
