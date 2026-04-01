@@ -40,6 +40,13 @@ const AdminStudents = () => {
   const [studentAttendance, setStudentAttendance] = useState<any[]>([]);
   const [studentFees, setStudentFees] = useState<any[]>([]);
 
+  // Create account state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createEmail, setCreateEmail] = useState("");
+  const [createName, setCreateName] = useState("");
+  const [createClassId, setCreateClassId] = useState("");
+  const [creating, setCreating] = useState(false);
+
   const fetchData = async () => {
     setLoading(true);
     const [spRes, classesRes, profilesRes] = await Promise.all([
