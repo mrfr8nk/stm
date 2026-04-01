@@ -79,6 +79,33 @@ Deno.serve(async (req) => {
 
     const activationLink = resetData?.properties?.action_link || siteUrl + "/login";
 
+    // Send welcome/activation email via send-branded-email
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const emailFnUrl = supabaseUrl + "/functions/v1/send-branded-email";
+      const emailRes = await fetch(emailFnUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + serviceKey,
+        },
+        body: JSON.stringify({
+          type: "welcome",
+          email,
+          welcome_data: {
+            name: full_name || email.split("@")[0],
+            role,
+            activationLink,
+          },
+        }),
+      });
+      const emailResult = await emailRes.text();
+      console.log("Welcome email result:", emailRes.status, emailResult);
+    } catch (emailErr) {
+      console.error("Welcome email failed (non-blocking):", emailErr);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -86,7 +113,7 @@ Deno.serve(async (req) => {
         email,
         role,
         activation_link: activationLink,
-        message: role + " account created successfully.",
+        message: role + " account created. Activation email sent.",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
