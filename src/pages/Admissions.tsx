@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { CheckCircle, FileText, Calendar, DollarSign, Users, BookOpen, Award, Send, Loader2 } from "lucide-react";
+import { CheckCircle, FileText, Calendar, DollarSign, Users, BookOpen, Award, Send, Loader2, Upload, Trash2, Camera } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

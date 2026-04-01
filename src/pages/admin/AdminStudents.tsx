@@ -567,6 +567,41 @@ const AdminStudents = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Create Student Account Dialog */}
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><UserPlus className="w-5 h-5" /> Create Student Account</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">Enter the student's email and class. An activation link will be sent so they can set up their account.</p>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">Student Name</label>
+                <Input placeholder="Full name (optional)" value={createName} onChange={e => setCreateName(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">Email Address *</label>
+                <Input type="email" placeholder="student@example.com" value={createEmail} onChange={e => setCreateEmail(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">Assign to Class</label>
+                <Select value={createClassId} onValueChange={setCreateClassId}>
+                  <SelectTrigger><SelectValue placeholder="Select class..." /></SelectTrigger>
+                  <SelectContent>
+                    {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name} (Form {c.form})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateAccount} disabled={creating}>
+                  {creating ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Creating...</> : <><Send className="w-4 h-4 mr-1" /> Create & Send Link</>}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
