@@ -287,6 +287,29 @@ const Admissions = () => {
                     </div>
                   </div>
 
+                  {/* Document Uploads */}
+                  <div>
+                    <h3 className="font-display font-bold text-foreground mb-3">Document Uploads (Optional)</h3>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Birth Certificate</label>
+                        <input ref={birthRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleDocUpload(e.target.files[0], "birth")} />
+                        <Button type="button" variant="outline" size="sm" onClick={() => birthRef.current?.click()} disabled={uploadingBirth} className="w-full">
+                          <Camera className="w-4 h-4 mr-1" /> {uploadingBirth ? "Uploading..." : birthCertUrl ? "Replace Image" : "Capture / Upload"}
+                        </Button>
+                        {birthCertUrl && <img src={birthCertUrl} alt="Birth cert" className="mt-2 w-full h-24 object-cover rounded border" />}
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Result Slip / Transfer Letter</label>
+                        <input ref={resultRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleDocUpload(e.target.files[0], "result")} />
+                        <Button type="button" variant="outline" size="sm" onClick={() => resultRef.current?.click()} disabled={uploadingResult} className="w-full">
+                          <Camera className="w-4 h-4 mr-1" /> {uploadingResult ? "Uploading..." : resultSlipUrl ? "Replace Image" : "Capture / Upload"}
+                        </Button>
+                        {resultSlipUrl && <img src={resultSlipUrl} alt="Result slip" className="mt-2 w-full h-24 object-cover rounded border" />}
+                      </div>
+                    </div>
+                  </div>
+
                   <Button type="submit" className="w-full" size="lg" disabled={submitting}>
                     {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting...</> : <><Send className="w-4 h-4 mr-2" /> Submit Application</>}
                   </Button>
