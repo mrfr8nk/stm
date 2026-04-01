@@ -15,7 +15,7 @@ import ExportDropdown from "@/components/ExportDropdown";
 import {
   Users, Search, GraduationCap, Eye, ArrowUpDown, Mail, Phone, Save, Edit,
   UserX, UserCheck, Trash2, MapPin, Calendar, CreditCard, Heart, AlertTriangle,
-  Droplets, Shield, BookOpen, ClipboardCheck, Download
+  Droplets, Shield, BookOpen, ClipboardCheck, Download, UserPlus, Loader2, Send
 } from "lucide-react";
 
 type SortField = "full_name" | "student_id" | "form" | "class_name" | "guardian_name";
