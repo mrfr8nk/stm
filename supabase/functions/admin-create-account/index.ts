@@ -81,19 +81,26 @@ Deno.serve(async (req) => {
 
     // Send welcome/activation email via send-branded-email
     try {
-      const emailRes = await supabase.functions.invoke("send-branded-email", {
-        body: {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const emailFnUrl = supabaseUrl + "/functions/v1/send-branded-email";
+      const emailRes = await fetch(emailFnUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + serviceKey,
+        },
+        body: JSON.stringify({
           type: "welcome",
-          to: email,
-          data: {
+          email,
+          welcome_data: {
             name: full_name || email.split("@")[0],
             role,
-            activationLink,
-            portalUrl: siteUrl + "/login",
           },
-        },
+        }),
       });
-      console.log("Welcome email result:", emailRes.data);
+      const emailResult = await emailRes.text();
+      console.log("Welcome email result:", emailRes.status, emailResult);
     } catch (emailErr) {
       console.error("Welcome email failed (non-blocking):", emailErr);
     }
