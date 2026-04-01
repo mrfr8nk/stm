@@ -29,6 +29,7 @@ const teacherNav: NavItem[] = [
   { label: "Messages", path: "/teacher/messages", icon: MessageSquare },
   { label: "Announcements", path: "/teacher/announcements", icon: Bell },
   { label: "Record Book", path: "/teacher/record-book", icon: BookOpen },
+  { label: "Teaching AI", path: "/teacher/ai-assistant", icon: BookOpen },
   { label: "Verify Documents", path: "/teacher/verify", icon: ShieldCheck },
   { label: "Settings", path: "/teacher/profile", icon: Settings },
 ];
