@@ -96,6 +96,7 @@ Deno.serve(async (req) => {
           welcome_data: {
             name: full_name || email.split("@")[0],
             role,
+            activationLink,
           },
         }),
       });
