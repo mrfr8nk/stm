@@ -16,7 +16,7 @@ const NewsSection = () => {
       .eq("is_active", true)
       .order("display_order")
       .order("created_at", { ascending: false })
-      .limit(3)
+      .limit(6)
       .then(({ data }) => {
         setUpdates(data || []);
         setLoading(false);
