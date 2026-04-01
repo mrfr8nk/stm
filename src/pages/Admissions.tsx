@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { CheckCircle, FileText, Calendar, DollarSign, Users, BookOpen, Award, Send, Loader2 } from "lucide-react";
+import { CheckCircle, FileText, Calendar, DollarSign, Users, BookOpen, Award, Send, Loader2, Upload, Trash2, Camera } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,12 @@ const Admissions = () => {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [birthCertUrl, setBirthCertUrl] = useState("");
+  const [resultSlipUrl, setResultSlipUrl] = useState("");
+  const [uploadingBirth, setUploadingBirth] = useState(false);
+  const [uploadingResult, setUploadingResult] = useState(false);
+  const birthRef = useRef<HTMLInputElement>(null);
+  const resultRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     full_name: "",
     email: "",
@@ -62,6 +68,23 @@ const Admissions = () => {
     notes: "",
     national_id: "",
   });
+
+  const handleDocUpload = async (file: File, type: "birth" | "result") => {
+    const setUploading = type === "birth" ? setUploadingBirth : setUploadingResult;
+    const setUrl = type === "birth" ? setBirthCertUrl : setResultSlipUrl;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${type}_${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("application-documents").upload(path, file);
+    if (error) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("application-documents").getPublicUrl(path);
+    setUrl(urlData.publicUrl);
+    setUploading(false);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -92,7 +115,9 @@ const Admissions = () => {
       previous_school: form.previous_school || null,
       address: form.address || null,
       notes: form.notes || null,
-    });
+      birth_cert_image_url: birthCertUrl || null,
+      result_slip_image_url: resultSlipUrl || null,
+    } as any);
     setSubmitting(false);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -258,6 +283,29 @@ const Admissions = () => {
                       <div className="sm:col-span-2">
                         <label className="text-sm font-medium text-foreground mb-1 block">Additional Notes</label>
                         <textarea name="notes" value={form.notes} onChange={handleChange} placeholder="Any additional information..." rows={3} className="w-full border border-input rounded-lg px-3 py-2 bg-background text-sm resize-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Document Uploads */}
+                  <div>
+                    <h3 className="font-display font-bold text-foreground mb-3">Document Uploads (Optional)</h3>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Birth Certificate</label>
+                        <input ref={birthRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleDocUpload(e.target.files[0], "birth")} />
+                        <Button type="button" variant="outline" size="sm" onClick={() => birthRef.current?.click()} disabled={uploadingBirth} className="w-full">
+                          <Camera className="w-4 h-4 mr-1" /> {uploadingBirth ? "Uploading..." : birthCertUrl ? "Replace Image" : "Capture / Upload"}
+                        </Button>
+                        {birthCertUrl && <img src={birthCertUrl} alt="Birth cert" className="mt-2 w-full h-24 object-cover rounded border" />}
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Result Slip / Transfer Letter</label>
+                        <input ref={resultRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleDocUpload(e.target.files[0], "result")} />
+                        <Button type="button" variant="outline" size="sm" onClick={() => resultRef.current?.click()} disabled={uploadingResult} className="w-full">
+                          <Camera className="w-4 h-4 mr-1" /> {uploadingResult ? "Uploading..." : resultSlipUrl ? "Replace Image" : "Capture / Upload"}
+                        </Button>
+                        {resultSlipUrl && <img src={resultSlipUrl} alt="Result slip" className="mt-2 w-full h-24 object-cover rounded border" />}
                       </div>
                     </div>
                   </div>

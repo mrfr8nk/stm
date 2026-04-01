@@ -166,6 +166,7 @@ export type Database = {
       applications: {
         Row: {
           address: string | null
+          birth_cert_image_url: string | null
           class_id: string | null
           created_at: string
           date_of_birth: string | null
@@ -181,6 +182,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           previous_school: string | null
+          result_slip_image_url: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -189,6 +191,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          birth_cert_image_url?: string | null
           class_id?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -204,6 +207,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           previous_school?: string | null
+          result_slip_image_url?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -212,6 +216,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          birth_cert_image_url?: string | null
           class_id?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -227,6 +232,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           previous_school?: string | null
+          result_slip_image_url?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string

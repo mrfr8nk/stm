@@ -1,42 +1,27 @@
+import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
-
-const newsItems = [
-  {
-    date: "March 10, 2025",
-    title: "Our New School Bus",
-    desc: "The school has acquired a new state-of-the-art 75-seater bus to enhance transportation services for students during educational trips and sporting events.",
-  },
-  {
-    date: "September 10, 2024",
-    title: "Speech & Prize Ceremony",
-    desc: "We celebrated our students' academic and athletic achievements at our annual awards ceremony, recognizing outstanding performance across all departments.",
-  },
-  {
-    date: "June 15, 2024",
-    title: "Quiz Team Wins Provincial Championship",
-    desc: "Our Quiz Team took first place at the Old Mutual School Quiz competition, demonstrating innovative problem-solving skills and teamwork.",
-  },
-  {
-    date: "May 20, 2024",
-    title: "New Special Needs Block",
-    desc: "We are nearing completion of a new state-of-the-art Special Needs Block, a donation courtesy of the Lord Bishop, the Rt Reverend Dr. F. Mutamiri.",
-  },
-  {
-    date: "April 5, 2024",
-    title: "Sports Day 2024",
-    desc: "Our annual sports day saw record participation with students competing in athletics, soccer, netball, and other sporting activities.",
-  },
-  {
-    date: "February 15, 2024",
-    title: "Term 1 Orientation",
-    desc: "New students and parents were welcomed to the St. Mary's family during our comprehensive orientation program for the new academic year.",
-  },
-];
+import { supabase } from "@/integrations/supabase/client";
 
 const News = () => {
+  const [updates, setUpdates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("homepage_updates")
+      .select("*")
+      .eq("is_active", true)
+      .order("display_order")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setUpdates(data || []);
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -55,21 +40,37 @@ const News = () => {
 
       <section className="py-16">
         <div className="container mx-auto px-4 max-w-4xl">
-          <div className="space-y-6">
-            {newsItems.map((item) => (
-              <article
-                key={item.title}
-                className="bg-card rounded-2xl p-6 shadow-card hover:shadow-card-hover transition-all duration-300 border border-border group"
-              >
-                <p className="font-body text-sm text-secondary font-semibold mb-2">{item.date}</p>
-                <h2 className="font-display text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">{item.title}</h2>
-                <p className="font-body text-muted-foreground leading-relaxed mb-4">{item.desc}</p>
-                <span className="font-body text-school-sky-dark font-semibold inline-flex items-center gap-1 group-hover:gap-2 transition-all cursor-pointer">
-                  Read More <ArrowRight className="w-4 h-4" />
-                </span>
-              </article>
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : updates.length === 0 ? (
+            <div className="text-center py-20 text-muted-foreground">
+              <p className="text-lg">No news updates yet. Check back soon!</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {updates.map((item) => (
+                <article
+                  key={item.id}
+                  className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 border border-border group"
+                >
+                  {item.image_url && (
+                    <div className="h-56 overflow-hidden">
+                      <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    </div>
+                  )}
+                  <div className="p-6">
+                    <p className="font-body text-sm text-secondary font-semibold mb-2">
+                      {new Date(item.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                    </p>
+                    <h2 className="font-display text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">{item.title}</h2>
+                    <p className="font-body text-muted-foreground leading-relaxed">{item.description}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

@@ -15,7 +15,7 @@ import ExportDropdown from "@/components/ExportDropdown";
 import {
   Users, Search, GraduationCap, Eye, ArrowUpDown, Mail, Phone, Save, Edit,
   UserX, UserCheck, Trash2, MapPin, Calendar, CreditCard, Heart, AlertTriangle,
-  Droplets, Shield, BookOpen, ClipboardCheck, Download
+  Droplets, Shield, BookOpen, ClipboardCheck, Download, UserPlus, Loader2, Send
 } from "lucide-react";
 
 type SortField = "full_name" | "student_id" | "form" | "class_name" | "guardian_name";
@@ -39,6 +39,13 @@ const AdminStudents = () => {
   const [studentGrades, setStudentGrades] = useState<any[]>([]);
   const [studentAttendance, setStudentAttendance] = useState<any[]>([]);
   const [studentFees, setStudentFees] = useState<any[]>([]);
+
+  // Create account state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createEmail, setCreateEmail] = useState("");
+  const [createName, setCreateName] = useState("");
+  const [createClassId, setCreateClassId] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -155,6 +162,42 @@ const AdminStudents = () => {
     fetchData();
   };
 
+  const handleCreateAccount = async () => {
+    if (!createEmail.trim()) {
+      toast({ title: "Email is required", variant: "destructive" });
+      return;
+    }
+    setCreating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-account`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          email: createEmail.trim(),
+          role: "student",
+          class_id: createClassId || null,
+          full_name: createName.trim() || null,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to create account");
+      toast({ title: "Student Account Created!", description: `Activation link sent to ${createEmail}` });
+      setCreateOpen(false);
+      setCreateEmail("");
+      setCreateName("");
+      setCreateClassId("");
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const toggleSelect = (uid: string) => {
     setSelectedIds(prev => { const n = new Set(prev); if (n.has(uid)) n.delete(uid); else n.add(uid); return n; });
   };
@@ -196,17 +239,22 @@ const AdminStudents = () => {
             <h1 className="font-display text-2xl font-bold text-foreground">Student Management</h1>
             <p className="text-muted-foreground text-sm">Manage all student records and profiles</p>
           </div>
-          <ExportDropdown
-            title="Student Directory"
-            filename="students_list"
-            headers={["Name", "Student ID", "Class", "Form", "Level", "Guardian", "Guardian Phone", "Email", "Status"]}
-            rows={filtered.map(s => [
-              s.profile?.full_name || "", s.student_id || "", s.class?.name || "", `Form ${s.form}`,
-              s.level?.replace("_", " ").toUpperCase(), s.guardian_name || "", s.guardian_phone || "",
-              s.profile?.email || "", s.is_active === false ? "Inactive" : "Active",
-            ])}
-            disabled={filtered.length === 0}
-          />
+          <div className="flex gap-2">
+            <Button onClick={() => setCreateOpen(true)}>
+              <UserPlus className="w-4 h-4 mr-1" /> Create Student
+            </Button>
+            <ExportDropdown
+              title="Student Directory"
+              filename="students_list"
+              headers={["Name", "Student ID", "Class", "Form", "Level", "Guardian", "Guardian Phone", "Email", "Status"]}
+              rows={filtered.map(s => [
+                s.profile?.full_name || "", s.student_id || "", s.class?.name || "", `Form ${s.form}`,
+                s.level?.replace("_", " ").toUpperCase(), s.guardian_name || "", s.guardian_phone || "",
+                s.profile?.email || "", s.is_active === false ? "Inactive" : "Active",
+              ])}
+              disabled={filtered.length === 0}
+            />
+          </div>
         </div>
 
         {/* Stats */}
@@ -517,6 +565,41 @@ const AdminStudents = () => {
                 </TabsContent>
               </Tabs>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Student Account Dialog */}
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><UserPlus className="w-5 h-5" /> Create Student Account</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">Enter the student's email and class. An activation link will be sent so they can set up their account.</p>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">Student Name</label>
+                <Input placeholder="Full name (optional)" value={createName} onChange={e => setCreateName(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">Email Address *</label>
+                <Input type="email" placeholder="student@example.com" value={createEmail} onChange={e => setCreateEmail(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">Assign to Class</label>
+                <Select value={createClassId} onValueChange={setCreateClassId}>
+                  <SelectTrigger><SelectValue placeholder="Select class..." /></SelectTrigger>
+                  <SelectContent>
+                    {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name} (Form {c.form})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateAccount} disabled={creating}>
+                  {creating ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Creating...</> : <><Send className="w-4 h-4 mr-1" /> Create & Send Link</>}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

@@ -21,11 +21,15 @@ const StudentGrades = () => {
     if (!user) return;
     supabase.from("grading_scales").select("*").order("level").order("min_mark", { ascending: false })
       .then(({ data }) => setScales(data || []));
-    supabase.from("fee_records").select("amount_due, amount_paid").eq("student_id", user.id).is("deleted_at", null)
-      .then(({ data }) => {
-        const bal = (data || []).reduce((sum, f) => sum + Number(f.amount_due) - Number(f.amount_paid), 0);
-        setFeeBalance(bal > 0 ? bal : 0);
-      });
+    // Check fee balance but also check for active full scholarships
+    Promise.all([
+      supabase.from("fee_records").select("amount_due, amount_paid").eq("student_id", user.id).is("deleted_at", null),
+      supabase.from("scholarships").select("coverage_percentage").eq("student_id", user.id).eq("is_active", true),
+    ]).then(([feesRes, scholarshipRes]) => {
+      const bal = (feesRes.data || []).reduce((sum, f) => sum + Number(f.amount_due) - Number(f.amount_paid), 0);
+      const hasFullScholarship = (scholarshipRes.data || []).some(s => Number(s.coverage_percentage) >= 100);
+      setFeeBalance(hasFullScholarship ? 0 : (bal > 0 ? bal : 0));
+    });
   }, [user]);
 
   useEffect(() => {

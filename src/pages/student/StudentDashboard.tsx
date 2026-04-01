@@ -28,13 +28,15 @@ const StudentDashboard = () => {
   useEffect(() => {
     if (!user) return;
     const fetchAll = async () => {
-      const [gradesRes, attRes, annRes, feesRes, spRes] = await Promise.all([
+      const [gradesRes, attRes, annRes, feesRes, spRes, scholarshipRes] = await Promise.all([
         supabase.from("grades").select("*, subjects(name)").eq("student_id", user.id).is("deleted_at", null).order("created_at", { ascending: false }),
         supabase.from("attendance").select("status").eq("student_id", user.id),
         supabase.from("announcements").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(5),
         supabase.from("fee_records").select("*").eq("student_id", user.id).is("deleted_at", null),
         supabase.from("student_profiles").select("*").eq("user_id", user.id).single(),
+        supabase.from("scholarships").select("coverage_percentage").eq("student_id", user.id).eq("is_active", true),
       ]);
+      const hasFullScholarship = (scholarshipRes.data || []).some(s => Number(s.coverage_percentage) >= 100);
 
       const grades = gradesRes.data || [];
       const att = attRes.data || [];
@@ -64,16 +66,18 @@ const StudentDashboard = () => {
       setRecentGrades(grades.slice(0, 6));
       setAnnouncements(annRes.data || []);
 
-      // Fee balance
+      // Fee balance - bypass for full scholarship students
       let totalBal = 0;
       const owingTerms: string[] = [];
-      fees.forEach(f => {
-        const bal = Number(f.amount_due) - Number(f.amount_paid);
-        if (bal > 0) {
-          totalBal += bal;
-          owingTerms.push(`${f.term.replace("_", " ").toUpperCase()} ${f.academic_year}`);
-        }
-      });
+      if (!hasFullScholarship) {
+        fees.forEach(f => {
+          const bal = Number(f.amount_due) - Number(f.amount_paid);
+          if (bal > 0) {
+            totalBal += bal;
+            owingTerms.push(`${f.term.replace("_", " ").toUpperCase()} ${f.academic_year}`);
+          }
+        });
+      }
       setFeeBalance(totalBal);
       setUnpaidTerms([...new Set(owingTerms)]);
     };
