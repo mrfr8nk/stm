@@ -447,7 +447,7 @@ function parentLinkContent(data: any): string {
   ].join('\n');
 }
 
-function welcomeContent(data: { name: string; role: string; portalUrl: string }): string {
+function welcomeContent(data: { name: string; role: string; portalUrl: string; activationLink?: string }): string {
   const roleLabel = data.role.charAt(0).toUpperCase() + data.role.slice(1);
   const roleFeatures: Record<string, string[]> = {
     student: ['View your grades and report cards', 'Track attendance records', 'Check fee balances and receipts', 'Chat with teachers and classmates'],
@@ -456,6 +456,8 @@ function welcomeContent(data: { name: string; role: string; portalUrl: string })
     admin: ['Manage all school operations', 'Generate reports and analytics', 'Oversee staff and students', 'Configure system settings'],
   };
   const features = roleFeatures[data.role] || roleFeatures.student;
+  const actionUrl = data.activationLink || data.portalUrl;
+  const btnLabel = data.activationLink ? '&#128273; Activate My Account' : '&#128218; Log In Now';
   return [
     '<h2 style="color:#2c3e50;font-size:22px;',
     'font-weight:600;margin:0 0 16px;',
@@ -465,7 +467,9 @@ function welcomeContent(data: { name: string; role: string; portalUrl: string })
     'text-align:center;">',
     `Hello <strong>${data.name}</strong>,<br/>`,
     `Your <strong>${roleLabel}</strong> account has been`,
-    ' created successfully.</p>',
+    ' created successfully.',
+    data.activationLink ? ' Please click below to activate your account and set your password.' : '',
+    '</p>',
     '<div style="background:#e8f5e9;',
     'border:1px solid #c8e6c9;',
     'border-radius:12px;padding:20px;',
@@ -479,13 +483,13 @@ function welcomeContent(data: { name: string; role: string; portalUrl: string })
     '</ul></div>',
     '<table width="100%" cellpadding="0" cellspacing="0">',
     '<tr><td align="center" style="padding:8px 0 24px;">',
-    `<a href="${data.portalUrl}"`,
+    `<a href="${actionUrl}"`,
     ' style="display:inline-block;',
     'background:#0a3d62;color:#fff;',
     'text-decoration:none;padding:16px 48px;',
     'border-radius:12px;font-size:16px;',
     'font-weight:600;">',
-    '&#128218; Log In Now</a>',
+    `${btnLabel}</a>`,
     '</td></tr></table>',
     '<div style="text-align:center;">',
     '<p style="color:#888;font-size:12px;margin:0;">',
