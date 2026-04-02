@@ -8,7 +8,6 @@ const HeadmasterSection = () => {
   const [headmaster, setHeadmaster] = useState<any>(null);
 
   useEffect(() => {
-    // Try to load headmaster from staff_gallery
     supabase
       .from("staff_gallery")
       .select("*")
@@ -34,14 +33,12 @@ const HeadmasterSection = () => {
         </div>
 
         <div className={`relative max-w-5xl mx-auto rounded-2xl overflow-hidden shadow-card-hover transition-all duration-700 delay-200 ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
-          {/* Background image */}
           <img
             src={imgSrc}
             alt={`${name} - ${title}`}
             className="w-full h-[500px] md:h-[550px] object-cover"
           />
 
-          {/* Overlay with message */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 flex flex-col justify-end p-6 md:p-10">
             <div className="absolute top-6 left-6 text-7xl font-display text-white/30 select-none">"</div>
 
