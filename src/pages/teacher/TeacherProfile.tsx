@@ -111,8 +111,8 @@ const TeacherProfile = () => {
           </Card>
         )}
         <BiometricEnrollment />
-        {/* Signature for Reports */}
         <SignatureManager mode="teacher" />
+        <AccountActivity />
       </div>
     </DashboardLayout>
   );

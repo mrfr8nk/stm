@@ -380,6 +380,7 @@ const ParentSettings = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        <AccountActivity />
       </div>
     </DashboardLayout>
   );

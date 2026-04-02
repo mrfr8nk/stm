@@ -215,6 +215,7 @@ const StudentProfile = () => {
             </CardContent>
           </Card>
         )}
+        <AccountActivity />
       </div>
     </DashboardLayout>
   );
