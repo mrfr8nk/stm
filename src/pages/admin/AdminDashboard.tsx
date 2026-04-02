@@ -67,11 +67,21 @@ const AdminDashboard = () => {
         setFormDistribution(Object.entries(formMap).sort(([a], [b]) => Number(a) - Number(b)).map(([form, count]) => ({ form: `Form ${form}`, count })));
       }
 
-      // Activity log - fetch all recent activity across users
+      // Activity log with profile info for emails
       if (user) {
         const { data: activities } = await supabase.from("activity_log").select("*")
           .order("created_at", { ascending: false }).limit(15);
-        setActivityLog(activities || []);
+        
+        if (activities && activities.length > 0) {
+          const userIds = [...new Set(activities.map(a => a.user_id))];
+          const { data: actProfiles } = await supabase.from("profiles").select("user_id, full_name, email").in("user_id", userIds);
+          const profileMap = new Map((actProfiles || []).map(p => [p.user_id, p]));
+          setActivityLog(activities.map(a => ({
+            ...a,
+            _email: profileMap.get(a.user_id)?.email || "",
+            _name: profileMap.get(a.user_id)?.full_name || "",
+          })));
+        }
       }
     };
     fetchAll();
@@ -244,7 +254,11 @@ const AdminDashboard = () => {
                   <div key={a.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/40 border-l-4 border-l-primary">
                     <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">{a.action}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">{a.action}</p>
+                        {a._email && <span className="text-xs text-primary font-medium">({a._email})</span>}
+                      </div>
+                      {a._name && <p className="text-xs text-muted-foreground">by {a._name}</p>}
                       {a.details && <p className="text-xs text-muted-foreground truncate">{a.details}</p>}
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-xs text-muted-foreground">{timeAgo(a.created_at)}</p>

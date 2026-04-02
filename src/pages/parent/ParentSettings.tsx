@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import AvatarUpload from "@/components/AvatarUpload";
 import PhoneInput, { normalizePhone } from "@/components/PhoneInput";
 import { Settings, Unlink, UserPlus, Link2, Loader2, AlertCircle, Save } from "lucide-react";
+import AccountActivity from "@/components/AccountActivity";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import BiometricEnrollment from "@/components/BiometricEnrollment";
 
@@ -379,6 +380,7 @@ const ParentSettings = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        <AccountActivity />
       </div>
     </DashboardLayout>
   );

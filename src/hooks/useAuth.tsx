@@ -46,11 +46,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
         setTimeout(() => fetchRoleAndProfile(sess.user.id), 0);
+        // Log login activity
+        if (event === "SIGNED_IN") {
+          setTimeout(() => {
+            supabase.from("activity_log").insert({
+              user_id: sess.user.id,
+              action: "Logged in",
+              details: `Email: ${sess.user.email} | ${new Date().toLocaleString()}`,
+              entity_type: "auth",
+            }).then(() => {});
+          }, 500);
+        }
       } else {
         setRole(null);
         setProfile(null);
