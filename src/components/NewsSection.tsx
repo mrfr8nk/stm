@@ -19,10 +19,12 @@ const NewsSection = () => {
           .order("created_at", { ascending: false })
           .limit(6);
 
+        console.log("NewsSection query result:", { data, err });
         if (err) {
           console.error("NewsSection fetch error:", err);
           setError(true);
         } else {
+          console.log("NewsSection loaded updates:", data?.length);
           setUpdates(data || []);
         }
       } catch (e) {
@@ -45,7 +47,17 @@ const NewsSection = () => {
     );
   }
 
-  if (error || updates.length === 0) return null;
+  if (error) {
+    return (
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-muted-foreground">Unable to load updates. Please try again later.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (updates.length === 0) return null;
 
   return (
     <section className="py-20 bg-muted/30">
