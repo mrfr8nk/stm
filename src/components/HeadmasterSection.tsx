@@ -33,43 +33,41 @@ const HeadmasterSection = () => {
           <div className="w-16 h-1 bg-secondary mx-auto rounded-full" />
         </div>
 
-        <div className="grid md:grid-cols-[300px_1fr] gap-10 items-start max-w-5xl mx-auto">
-          <div className={`relative transition-all duration-700 delay-200 ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
-            <img
-              src={imgSrc}
-              alt={`${name} - ${title}`}
-              className="w-full rounded-2xl shadow-card-hover object-cover aspect-square"
-            />
-            <div className="absolute -top-4 -left-4 text-7xl font-display text-secondary opacity-40 select-none">"</div>
-          </div>
+        <div className={`relative max-w-5xl mx-auto rounded-2xl overflow-hidden shadow-card-hover transition-all duration-700 delay-200 ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
+          {/* Background image */}
+          <img
+            src={imgSrc}
+            alt={`${name} - ${title}`}
+            className="w-full h-[500px] md:h-[550px] object-cover"
+          />
 
-          <div className={`transition-all duration-700 delay-400 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-            <h3 className="font-display text-2xl font-bold text-primary mb-1">{name}</h3>
-            <p className="font-body text-secondary font-semibold mb-6">{title}</p>
+          {/* Overlay with message */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 flex flex-col justify-end p-6 md:p-10">
+            <div className="absolute top-6 left-6 text-7xl font-display text-white/30 select-none">"</div>
 
-            <blockquote className="font-body text-muted-foreground space-y-4 border-l-4 border-secondary pl-6">
+            <blockquote className="font-body text-white/90 space-y-3 max-w-3xl">
               {headmaster?.bio ? (
                 headmaster.bio.split("\n").filter(Boolean).map((p: string, i: number) => (
-                  <p key={i} className="leading-relaxed">{p}</p>
+                  <p key={i} className="leading-relaxed text-sm md:text-base">{p}</p>
                 ))
               ) : (
                 <>
-                  <p className="italic leading-relaxed">
+                  <p className="italic leading-relaxed text-sm md:text-base">
                     St. Mary's High School has been and will remain a fountain of wisdom, and it is the wise who will drink from this great fountain of wisdom.
                   </p>
-                  <p className="leading-relaxed">
+                  <p className="leading-relaxed text-sm md:text-base">
                     Our success as a school is an outcome of an ever-deepening culture of industry and commitment to study on the part of our learners, complimented by a hard-working team of tried and tested professionals.
                   </p>
-                  <p className="leading-relaxed">
+                  <p className="leading-relaxed text-sm md:text-base">
                     As we stand guided by our motto: <strong>"We Think We Can and Indeed We Can"</strong> — I invite you to join our community where excellence is not just a goal, but a way of life.
                   </p>
                 </>
               )}
             </blockquote>
 
-            <div className="mt-6 font-body">
-              <p className="font-semibold text-foreground">{name}</p>
-              <p className="text-sm text-muted-foreground">{title}, St. Mary's High School</p>
+            <div className="mt-4 font-body">
+              <p className="font-semibold text-white">{name}</p>
+              <p className="text-sm text-white/70">{title}, St. Mary's High School</p>
             </div>
           </div>
         </div>
