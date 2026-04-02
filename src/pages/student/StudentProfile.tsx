@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { User, Save, Heart, Shield, Edit, X } from "lucide-react";
+import AccountActivity from "@/components/AccountActivity";
 import AvatarUpload from "@/components/AvatarUpload";
 import ThemeToggle from "@/components/ThemeToggle";
 import PhoneInput from "@/components/PhoneInput";
