@@ -19,10 +19,12 @@ const NewsSection = () => {
           .order("created_at", { ascending: false })
           .limit(6);
 
+        console.log("NewsSection query result:", { data, err });
         if (err) {
           console.error("NewsSection fetch error:", err);
           setError(true);
         } else {
+          console.log("NewsSection loaded updates:", data?.length);
           setUpdates(data || []);
         }
       } catch (e) {
