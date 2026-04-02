@@ -47,7 +47,17 @@ const NewsSection = () => {
     );
   }
 
-  if (error || updates.length === 0) return null;
+  if (error) {
+    return (
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-muted-foreground">Unable to load updates. Please try again later.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (updates.length === 0) return null;
 
   return (
     <section className="py-20 bg-muted/30">
